@@ -1,0 +1,9 @@
+{
+  "pitches": [
+    {"pitch_type": "직구", "velocity": 148.2, "plate_x": 0.1, "plate_z": 0.6, "zone": 5, "result": "스트라이크", "balls": 0, "strikes": 0},
+    {"pitch_type": "슬라이더", "velocity": 132.5, "plate_x": 0.4, "plate_z": 0.2, "zone": 13, "result": "볼", "balls": 0, "strikes": 1},
+    {"pitch_type": "직구", "velocity": 149.1, "plate_x": -0.2, "plate_z": 0.8, "zone": 2, "result": "헛스윙", "balls": 1, "strikes": 1},
+    {"pitch_type": "체인지업", "velocity": 128.8, "plate_x": 0.3, "plate_z": 0.3, "zone": 6, "result": "인플레이", "balls": 1, "strikes": 2},
+    {"pitch_type": "직구", "velocity": 147.8, "plate_x": -0.1, "plate_z": 0.5, "zone": 5, "result": "루킹스트라이크", "balls": 2, "strikes": 2}
+  ]
+}

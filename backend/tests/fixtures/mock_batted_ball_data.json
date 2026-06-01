@@ -1,0 +1,9 @@
+{
+  "batted_balls": [
+    {"exit_velocity": 155.2, "launch_angle": 18.4, "direction": "우", "result": "안타", "spray_x": 45.2, "spray_y": 120.3},
+    {"exit_velocity": 145.8, "launch_angle": -3.2, "direction": "내야", "result": "아웃", "spray_x": 12.1, "spray_y": 30.5},
+    {"exit_velocity": 162.1, "launch_angle": 27.5, "direction": "좌", "result": "홈런", "spray_x": -80.3, "spray_y": 145.2},
+    {"exit_velocity": 138.4, "launch_angle": 45.2, "direction": "중", "result": "아웃", "spray_x": 2.1, "spray_y": 110.8},
+    {"exit_velocity": 151.7, "launch_angle": 12.8, "direction": "우", "result": "2루타", "spray_x": 60.4, "spray_y": 135.6}
+  ]
+}

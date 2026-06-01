@@ -1,0 +1,13 @@
+{
+  "player": {
+    "id": 1, "kbo_id": "73912", "name": "이정후",
+    "team": "키움 히어로즈", "position": "CF",
+    "throws": "R", "bats": "L"
+  },
+  "batting_stat": {
+    "season": 2024, "games": 144, "pa": 620, "ab": 540,
+    "hits": 188, "hr": 23, "rbi": 87, "avg": 0.349,
+    "obp": 0.421, "slg": 0.530, "ops": 0.951,
+    "woba": 0.412, "wrc_plus": 158, "babip": 0.361, "war": 7.2
+  }
+}

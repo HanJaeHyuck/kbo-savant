@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(docker --version 2>&1; docker ps 2>&1 | Select-Object -First 3)"
+    ]
+  }
+}
