@@ -1,12 +1,39 @@
+import time
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import Optional
 from app.models import Player, BattingStat, PitchingStat, Pitch, BattedBall
-from app.schemas.stats import (
-    BattingStatsResponse, ClassicBattingStats, SaberBattingStats, TrackingBattingStats,
-    PitchingStatsResponse, ClassicPitchingStats, SaberPitchingStats, TrackingPitchingStats,
-)
 
+# ── 퍼센타일 인메모리 캐시 (5분 TTL) ─────────────────
+_CACHE: dict = {}
+_CACHE_TTL = 300
+
+
+def _cached_batting_percentiles(season: int, db: Session) -> dict:
+    from app.services.percentile_service import compute_batting_percentiles
+    key = f"batting_{season}"
+    if key in _CACHE:
+        data, ts = _CACHE[key]
+        if time.time() - ts < _CACHE_TTL:
+            return data
+    data = compute_batting_percentiles(season, db)
+    _CACHE[key] = (data, time.time())
+    return data
+
+
+def _cached_pitching_percentiles(season: int, db: Session) -> dict:
+    from app.services.percentile_service import compute_pitching_percentiles
+    key = f"pitching_{season}"
+    if key in _CACHE:
+        data, ts = _CACHE[key]
+        if time.time() - ts < _CACHE_TTL:
+            return data
+    data = compute_pitching_percentiles(season, db)
+    _CACHE[key] = (data, time.time())
+    return data
+
+
+# ── 타자 ─────────────────────────────────────────────
 
 def get_batting_stats_response(player_id: int, season: int, db: Session) -> dict:
     stat = (
@@ -15,9 +42,7 @@ def get_batting_stats_response(player_id: int, season: int, db: Session) -> dict
         .first()
     )
     if not stat:
-        classic = {}
-        saber = {}
-        tracking = {}
+        classic, saber, tracking = {}, {}, {}
     else:
         classic = {
             "games": stat.games, "pa": stat.pa, "avg": stat.avg,
@@ -29,18 +54,24 @@ def get_batting_stats_response(player_id: int, season: int, db: Session) -> dict
             "babip": stat.babip, "war": stat.war,
         }
         tracking = {
-            "hard_hit_pct": stat.hard_hit_pct,
-            "barrel_pct": stat.barrel_pct,
+            "hard_hit_pct":   stat.hard_hit_pct,
+            "barrel_pct":     stat.barrel_pct,
             "sweet_spot_pct": stat.sweet_spot_pct,
-            "avg_ev": stat.avg_ev,
-            "chase_pct": stat.chase_pct,
-            "whiff_pct": stat.whiff_pct,
+            "avg_ev":         stat.avg_ev,
+            "chase_pct":      stat.chase_pct,
+            "whiff_pct":      stat.whiff_pct,
         }
 
-    all_war = [r.war for r in db.query(BattingStat.war).filter(
-        BattingStat.season == season, BattingStat.war.isnot(None)
-    ).all()]
-    percentiles = {"war": 50, "wrc_plus": 50, "hard_hit_pct": 50, "barrel_pct": 50, "avg_ev": 50}
+    # 실제 퍼센타일 (리그 내 위치)
+    all_pcts = _cached_batting_percentiles(season, db)
+    raw = all_pcts.get(player_id, {})
+    percentiles = {
+        "hard_hit_pct": raw.get("hard_hit_pct", 50),
+        "barrel_pct":   raw.get("barrel_pct", 50),
+        "avg_ev":       raw.get("avg_ev", 50),
+        "wrc_plus":     raw.get("wrc_plus", 50),
+        "war":          raw.get("war", 50),
+    }
 
     return {
         "player_id": player_id,
@@ -52,6 +83,43 @@ def get_batting_stats_response(player_id: int, season: int, db: Session) -> dict
     }
 
 
+def get_career_batting_response(player_id: int, db: Session) -> list[dict]:
+    """선수의 연도별 타자 스탯 전체 반환"""
+    rows = (
+        db.query(BattingStat)
+        .filter(BattingStat.player_id == player_id)
+        .order_by(BattingStat.season.desc())
+        .all()
+    )
+    return [
+        {
+            "season":      r.season,
+            "games":       r.games,
+            "pa":          r.pa,
+            "avg":         r.avg,
+            "obp":         r.obp,
+            "slg":         r.slg,
+            "ops":         r.ops,
+            "hr":          r.hr,
+            "rbi":         r.rbi,
+            "sb":          r.sb,
+            "woba":        r.woba,
+            "wrc_plus":    r.wrc_plus,
+            "babip":       r.babip,
+            "war":         r.war,
+            "hard_hit_pct":   r.hard_hit_pct,
+            "barrel_pct":     r.barrel_pct,
+            "sweet_spot_pct": r.sweet_spot_pct,
+            "avg_ev":         r.avg_ev,
+            "chase_pct":      r.chase_pct,
+            "whiff_pct":      r.whiff_pct,
+        }
+        for r in rows
+    ]
+
+
+# ── 투수 ─────────────────────────────────────────────
+
 def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dict:
     stat = (
         db.query(PitchingStat)
@@ -59,9 +127,7 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
         .first()
     )
     if not stat:
-        classic = {}
-        saber = {}
-        tracking = {}
+        classic, saber, tracking = {}, {}, {}
     else:
         classic = {
             "games": stat.games, "gs": stat.gs, "ip": stat.ip,
@@ -75,14 +141,22 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
         }
         tracking = {
             "avg_ev_allowed": stat.avg_ev_allowed,
-            "hard_hit_pct": stat.hard_hit_pct,
-            "barrel_pct": stat.barrel_pct,
-            "csw_pct": stat.csw_pct,
-            "whiff_pct": stat.whiff_pct,
-            "chase_pct": stat.chase_pct,
+            "hard_hit_pct":   stat.hard_hit_pct,
+            "barrel_pct":     stat.barrel_pct,
+            "csw_pct":        stat.csw_pct,
+            "whiff_pct":      stat.whiff_pct,
+            "chase_pct":      stat.chase_pct,
         }
 
-    percentiles = {"era_minus": 50, "fip": 50, "hard_hit_pct": 50, "csw_pct": 50, "war": 50}
+    all_pcts = _cached_pitching_percentiles(season, db)
+    raw = all_pcts.get(player_id, {})
+    percentiles = {
+        "era_minus":    raw.get("era_minus", 50),
+        "fip":          raw.get("fip", 50),
+        "hard_hit_pct": raw.get("hard_hit_pct", 50),
+        "csw_pct":      raw.get("csw_pct", 50),
+        "war":          raw.get("war", 50),
+    }
 
     return {
         "player_id": player_id,
@@ -93,6 +167,45 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
         "percentiles": percentiles,
     }
 
+
+def get_career_pitching_response(player_id: int, db: Session) -> list[dict]:
+    """선수의 연도별 투수 스탯 전체 반환"""
+    rows = (
+        db.query(PitchingStat)
+        .filter(PitchingStat.player_id == player_id)
+        .order_by(PitchingStat.season.desc())
+        .all()
+    )
+    return [
+        {
+            "season":   r.season,
+            "games":    r.games,
+            "gs":       r.gs,
+            "ip":       r.ip,
+            "wins":     r.wins,
+            "losses":   r.losses,
+            "era":      r.era,
+            "fip":      r.fip,
+            "xfip":     r.xfip,
+            "era_minus": r.era_minus,
+            "fip_minus": r.fip_minus,
+            "k_pct":    r.k_pct,
+            "bb_pct":   r.bb_pct,
+            "babip":    r.babip,
+            "lob_pct":  r.lob_pct,
+            "war":      r.war,
+            "csw_pct":  r.csw_pct,
+            "whiff_pct": r.whiff_pct,
+            "chase_pct": r.chase_pct,
+            "avg_ev_allowed": r.avg_ev_allowed,
+            "hard_hit_pct":   r.hard_hit_pct,
+            "barrel_pct":     r.barrel_pct,
+        }
+        for r in rows
+    ]
+
+
+# ── 투구 / 타구 ───────────────────────────────────────
 
 def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
     pitches = (
@@ -111,50 +224,61 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         if p.velocity:
             pitch_type_map[pt]["velocities"].append(p.velocity)
 
-    pitch_mix = []
-    for pt, data in pitch_type_map.items():
-        avg_v = round(sum(data["velocities"]) / len(data["velocities"]), 1) if data["velocities"] else 0.0
-        pitch_mix.append({
-            "pitch_type": pt,
-            "count": data["count"],
-            "pct": round(data["count"] / total * 100, 1) if total else 0.0,
-            "avg_velocity": avg_v,
-        })
+    pitch_mix = [
+        {
+            "pitch_type":   pt,
+            "count":        d["count"],
+            "pct":          round(d["count"] / total * 100, 1) if total else 0.0,
+            "avg_velocity": round(sum(d["velocities"]) / len(d["velocities"]), 1)
+                            if d["velocities"] else 0.0,
+        }
+        for pt, d in pitch_type_map.items()
+    ]
 
     zone_map: dict = {}
     for p in pitches:
         if p.zone is None:
             continue
-        if p.zone not in zone_map:
-            zone_map[p.zone] = {"pitches": 0, "hits": 0, "whiffs": 0, "swings": 0}
-        zone_map[p.zone]["pitches"] += 1
+        z = zone_map.setdefault(p.zone, {"pitches": 0, "hits": 0, "whiffs": 0, "swings": 0})
+        z["pitches"] += 1
         if p.result == "인플레이":
-            zone_map[p.zone]["hits"] += 1
+            z["hits"] += 1
         if p.result == "헛스윙":
-            zone_map[p.zone]["whiffs"] += 1
-            zone_map[p.zone]["swings"] += 1
-        elif p.result in ("파울", "인플레이", "번트"):
-            zone_map[p.zone]["swings"] += 1
+            z["whiffs"] += 1
+            z["swings"] += 1
+        elif p.result in ("파울", "번트"):
+            z["swings"] += 1
 
-    zone_data = []
-    for zone, data in zone_map.items():
-        batting_avg = round(data["hits"] / data["pitches"], 3) if data["pitches"] else 0.0
-        whiff = round(data["whiffs"] / data["swings"] * 100, 1) if data["swings"] else 0.0
-        zone_data.append({
-            "zone": zone,
-            "pitches": data["pitches"],
-            "batting_avg": batting_avg,
-            "whiff_pct": whiff,
-        })
+    zone_data = [
+        {
+            "zone":        zone,
+            "pitches":     d["pitches"],
+            "batting_avg": round(d["hits"] / d["pitches"], 3) if d["pitches"] else 0.0,
+            "whiff_pct":   round(d["whiffs"] / d["swings"] * 100, 1) if d["swings"] else 0.0,
+        }
+        for zone, d in zone_map.items()
+    ]
 
-    velocity_trend: list = []
+    # 날짜별 구속 트렌드
+    from collections import defaultdict
+    date_velo: dict = defaultdict(list)
+    for p in pitches:
+        if p.velocity and p.game_date:
+            date_velo[p.game_date].append(p.velocity)
+    velocity_trend = sorted(
+        [
+            {"game_date": str(d), "avg_velocity": round(sum(vs) / len(vs), 1)}
+            for d, vs in date_velo.items()
+        ],
+        key=lambda x: x["game_date"],
+    )
 
     return {
-        "player_id": player_id,
-        "season": season,
-        "total_pitches": total,
-        "pitch_mix": pitch_mix,
-        "zone_data": zone_data,
+        "player_id":      player_id,
+        "season":         season,
+        "total_pitches":  total,
+        "pitch_mix":      pitch_mix,
+        "zone_data":      zone_data,
         "velocity_trend": velocity_trend,
     }
 
@@ -167,19 +291,40 @@ def get_batted_balls_response(player_id: int, season: int, db: Session) -> dict:
     )
     spray_data = [
         {
-            "spray_x": b.spray_x,
-            "spray_y": b.spray_y,
-            "result": b.result,
+            "spray_x":      b.spray_x,
+            "spray_y":      b.spray_y,
+            "result":       b.result,
             "exit_velocity": b.exit_velocity,
             "launch_angle": b.launch_angle,
         }
         for b in balls
     ]
 
+    # 존별 타율
+    zone_map: dict = {}
+    for b in balls:
+        if b.launch_angle is None:
+            continue
+        # 발사각으로 간단한 존 분류 (실제는 타구 방향 기반)
+        direction = b.direction or "중"
+        z = zone_map.setdefault(direction, {"attempts": 0, "hits": 0})
+        z["attempts"] += 1
+        if b.result in ("안타", "2루타", "3루타", "홈런"):
+            z["hits"] += 1
+
+    zone_avg = [
+        {
+            "zone":     direction,
+            "avg":      round(d["hits"] / d["attempts"], 3) if d["attempts"] else 0.0,
+            "attempts": d["attempts"],
+        }
+        for direction, d in zone_map.items()
+    ]
+
     return {
-        "player_id": player_id,
-        "season": season,
-        "total": len(balls),
+        "player_id":  player_id,
+        "season":     season,
+        "total":      len(balls),
         "spray_data": spray_data,
-        "zone_avg": [],
+        "zone_avg":   zone_avg,
     }

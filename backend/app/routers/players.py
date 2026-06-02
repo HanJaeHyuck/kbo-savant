@@ -9,6 +9,8 @@ from app.schemas.stats import BattingStatsResponse, PitchingStatsResponse
 from app.services.data_service import (
     get_batting_stats_response,
     get_pitching_stats_response,
+    get_career_batting_response,
+    get_career_pitching_response,
     get_pitches_response,
     get_batted_balls_response,
 )
@@ -82,3 +84,25 @@ async def get_batted_balls(
     db: Session = Depends(get_db),
 ):
     return get_batted_balls_response(player_id, season, db)
+
+
+@router.get("/{player_id}/career/batting")
+async def get_career_batting(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail={
+            "detail": "선수를 찾을 수 없습니다.",
+            "error_code": "PLAYER_NOT_FOUND"
+        })
+    return {"player_id": player_id, "data": get_career_batting_response(player_id, db)}
+
+
+@router.get("/{player_id}/career/pitching")
+async def get_career_pitching(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail={
+            "detail": "선수를 찾을 수 없습니다.",
+            "error_code": "PLAYER_NOT_FOUND"
+        })
+    return {"player_id": player_id, "data": get_career_pitching_response(player_id, db)}
