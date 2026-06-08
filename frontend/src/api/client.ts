@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const BASE_URL = ''  // Vite 프록시 사용 (/api → localhost:8000)
 
 export class NotFoundError extends Error {
   constructor(message: string) {
