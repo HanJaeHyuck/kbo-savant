@@ -22,6 +22,7 @@ export default function PercentileBar({
           className="absolute left-0 top-0 h-full rounded-full transition-all"
           style={{ width: `${percentile}%`, backgroundColor: color }}
           data-percentile-level={level}
+          data-testid="percentile-bar-fill"
         />
       </div>
 

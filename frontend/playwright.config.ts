@@ -8,6 +8,12 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     screenshot: 'only-on-failure',
   },
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: true,
+    timeout: 60000,
+  },
   projects: [
     {
       name: 'Desktop Chrome',
