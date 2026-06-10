@@ -11,17 +11,29 @@ interface LeaderboardParams {
 }
 
 export const useLeaderboard = (params: LeaderboardParams) => {
+  const { type, stat, season, team, page, per_page } = params
   const [data, setData] = useState<unknown>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    setLoading(true)
-    apiClient.get('/api/leaderboard', { params })
-      .then(r => setData(r.data))
-      .catch(setError)
-      .finally(() => setLoading(false))
-  }, [params.type, params.stat, params.season, params.team, params.page])
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const r = await apiClient.get('/api/leaderboard', {
+          params: { type, stat, season, team, page, per_page },
+        })
+        if (!cancelled) setData(r.data)
+      } catch (e) {
+        if (!cancelled) setError(e as Error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [type, stat, season, team, page, per_page])
 
   return { data, loading, error }
 }

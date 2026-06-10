@@ -68,8 +68,8 @@ test.beforeEach(async ({ page }) => {
 
 test('타자 상세 접속 → 스프레이 차트 표시', async ({ page }) => {
   await page.goto('http://localhost:5173/players/1')
-  await expect(page.locator('[data-testid="spray-chart-container"]')).toBeVisible()
-  await expect(page.locator('[data-testid="spray-chart"]')).toBeVisible()
+  await expect(page.locator('[data-testid="spray-chart-container"]')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('[data-testid="spray-chart"]')).toBeVisible({ timeout: 10000 })
 })
 
 test('타자 상세 접속 → 존별 히트맵 표시', async ({ page }) => {

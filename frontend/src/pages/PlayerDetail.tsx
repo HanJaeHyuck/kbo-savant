@@ -73,29 +73,36 @@ export default function PlayerDetail() {
 
   useEffect(() => {
     if (!playerId) return
-    setLoading(true)
-    setError(null)
-
-    getPlayer(playerId)
-      .then((p: PlayerInfo) => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const p = await getPlayer(playerId)
+        if (cancelled) return
         setPlayerInfo(p)
         const isPitcher = p.position === 'P'
         const promises = isPitcher
           ? [getPitchingStats(playerId, season), getPitches(playerId, season)]
           : [getBattingStats(playerId, season), getBattedBalls(playerId, season)]
 
-        return Promise.all(promises).then(([stats, extraData]) => {
-          if (isPitcher) {
-            setPitching(stats as PitchingData)
-            setPitches(extraData as PitchesData)
-          } else {
-            setBatting(stats as BattingData)
-            setBattedBalls(extraData as BattedBallsData)
-          }
-        })
-      })
-      .catch(setError)
-      .finally(() => setLoading(false))
+        const [stats, extraData] = await Promise.all(promises)
+        if (cancelled) return
+        if (isPitcher) {
+          setPitching(stats as PitchingData)
+          setPitches(extraData as PitchesData)
+        } else {
+          setBatting(stats as BattingData)
+          setBattedBalls(extraData as BattedBallsData)
+        }
+      } catch (e) {
+        if (!cancelled) setError(e as Error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
   }, [playerId])
 
   if (loading) return <LoadingState />

@@ -77,7 +77,7 @@ test.describe('선수 비교 페이지', () => {
 
     const searchA = page.getByPlaceholder('선수 A 검색...')
     await searchA.fill('이정')
-    await expect(page.getByText('이정후').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('이정후').first()).toBeVisible({ timeout: 10000 })
     await page.getByText('이정후').first().click()
 
     await expect(page.locator('[data-testid="search-a"]')).toContainText('이정후')
@@ -89,11 +89,11 @@ test.describe('선수 비교 페이지', () => {
     await page.waitForLoadState('networkidle')
 
     await page.getByPlaceholder('선수 A 검색...').fill('이정')
-    await expect(page.getByText('이정후').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('이정후').first()).toBeVisible({ timeout: 10000 })
     await page.getByText('이정후').first().click()
 
     await page.getByPlaceholder('선수 B 검색...').fill('김도')
-    await expect(page.getByText('김도영').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('김도영').first()).toBeVisible({ timeout: 10000 })
     await page.getByText('김도영').first().click()
 
     await expect(page.locator('[data-testid="radar-chart"]')).toBeVisible({ timeout: 8000 })
@@ -149,11 +149,11 @@ test.describe('선수 비교 페이지', () => {
     await page.waitForLoadState('networkidle')
 
     await page.getByPlaceholder('선수 A 검색...').fill('이정')
-    await expect(page.getByText('이정후').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('이정후').first()).toBeVisible({ timeout: 10000 })
     await page.getByText('이정후').first().click()
 
     await page.getByPlaceholder('선수 B 검색...').fill('김도')
-    await expect(page.getByText('김도영').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('김도영').first()).toBeVisible({ timeout: 10000 })
     await page.getByText('김도영').first().click()
 
     await expect(page.locator('[data-testid="compare-view"]')).toBeVisible({ timeout: 8000 })

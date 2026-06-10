@@ -280,20 +280,32 @@ export default function Compare() {
   const season = 2024
 
   useEffect(() => {
-    if (playerA && playerB) {
-      setLoading(true)
-      getCompare(`${playerA.id},${playerB.id}`, season)
-        .then((data: ComparePlayerData[]) => setCompareData(data))
-        .catch(() => setCompareData(null))
-        .finally(() => setLoading(false))
-    } else if (playerA) {
-      // fetch single player from compare endpoint
-      getCompare(`${playerA.id}`, season)
-        .then((data: ComparePlayerData[]) => setCompareData(data))
-        .catch(() => setCompareData(null))
-    } else {
-      setCompareData(null)
+    let cancelled = false
+    async function load() {
+      if (playerA && playerB) {
+        setLoading(true)
+        try {
+          const data = await getCompare(`${playerA.id},${playerB.id}`, season)
+          if (!cancelled) setCompareData(data)
+        } catch {
+          if (!cancelled) setCompareData(null)
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+      } else if (playerA) {
+        // fetch single player from compare endpoint
+        try {
+          const data = await getCompare(`${playerA.id}`, season)
+          if (!cancelled) setCompareData(data)
+        } catch {
+          if (!cancelled) setCompareData(null)
+        }
+      } else {
+        setCompareData(null)
+      }
     }
+    load()
+    return () => { cancelled = true }
   }, [playerA, playerB])
 
   const dataA = compareData?.[0] ?? null

@@ -7,11 +7,20 @@ export const usePlayer = (id: number) => {
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    setLoading(true)
-    getPlayer(id)
-      .then(setPlayer)
-      .catch(setError)
-      .finally(() => setLoading(false))
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const p = await getPlayer(id)
+        if (!cancelled) setPlayer(p)
+      } catch (e) {
+        if (!cancelled) setError(e as Error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
   }, [id])
 
   return { player, loading, error }
