@@ -7,8 +7,10 @@ import ErrorMessage from '../components/ui/ErrorMessage'
 import StrikeZoneMap from '../components/charts/StrikeZoneMap'
 import VeloTrend from '../components/charts/VeloTrend'
 import PitchMix from '../components/charts/PitchMix'
+import SprayChart from '../components/charts/SprayChart'
+import RadarChart from '../components/charts/RadarChart'
 import { getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls } from '../api/players'
-import type { ZoneData, VeloPoint, PitchType } from '../types'
+import type { ZoneData, VeloPoint, PitchType, SprayData } from '../types'
 
 interface PlayerInfo {
   id: number
@@ -43,9 +45,16 @@ interface BattingData {
   percentiles: Record<string, number>
 }
 
+interface ZoneAvg {
+  zone: number
+  avg: number
+  attempts: number
+}
+
 interface BattedBallsData {
   total: number
-  spray_data: { spray_x: number; spray_y: number; result: string; exit_velocity: number; launch_angle: number }[]
+  spray_data: SprayData[]
+  zone_avg?: ZoneAvg[]
 }
 
 export default function PlayerDetail() {
@@ -58,7 +67,7 @@ export default function PlayerDetail() {
   const [pitching, setPitching] = useState<PitchingData | null>(null)
   const [batting, setBatting] = useState<BattingData | null>(null)
   const [pitches, setPitches] = useState<PitchesData | null>(null)
-  const [_battedBalls, setBattedBalls] = useState<BattedBallsData | null>(null)
+  const [battedBalls, setBattedBalls] = useState<BattedBallsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
@@ -138,7 +147,7 @@ export default function PlayerDetail() {
       <main className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-8">
         {isPitcher
           ? <PitcherView pitching={pitching} pitches={pitches} />
-          : <BatterView batting={batting} />
+          : <BatterView batting={batting} battedBalls={battedBalls} />
         }
       </main>
     </div>
@@ -249,10 +258,37 @@ function PitcherView({ pitching, pitches }: { pitching: PitchingData | null; pit
   )
 }
 
-/* ── 타자 뷰 (Goal 10에서 완성) ─────────────────── */
-function BatterView({ batting }: { batting: BattingData | null }) {
+/* ── 타자 뷰 ─────────────────────────────────────── */
+const RADAR_STATS = ['WAR', 'wRC+', '하드힛%', '배럴%', '평균EV', 'Chase%']
+
+function BatterView({ batting, battedBalls }: { batting: BattingData | null; battedBalls: BattedBallsData | null }) {
+  const [sprayColorBy, setSprayColorBy] = useState<'result' | 'exit_velocity'>('result')
+
+  const zoneData: ZoneData[] = battedBalls?.zone_avg?.map(z => ({
+    zone: z.zone,
+    pitches: z.attempts,
+    batting_avg: z.avg,
+    whiff_pct: 0,
+  })) ?? []
+
+  const radarPlayers = batting
+    ? [{
+        name: '퍼센타일',
+        data: {
+          WAR: batting.percentiles.war ?? 50,
+          'wRC+': batting.percentiles.wrc_plus ?? 50,
+          '하드힛%': batting.percentiles.hard_hit_pct ?? 50,
+          '배럴%': batting.percentiles.barrel_pct ?? 50,
+          '평균EV': batting.percentiles.avg_ev ?? 50,
+          'Chase%': batting.percentiles.chase_pct ?? 50,
+        },
+      }]
+    : []
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      {/* 좌측: 시즌 스탯 */}
       <div className="space-y-4">
         <SectionTitle>2024 시즌 스탯</SectionTitle>
         {batting ? (
@@ -268,10 +304,10 @@ function BatterView({ batting }: { batting: BattingData | null }) {
         {batting && (
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">트래킹 지표</p>
-            <div className="space-y-2">
-              <StatRow label="하드힛%"    value={`${batting.tracking.hard_hit_pct.toFixed(1)}%`} />
-              <StatRow label="배럴%"      value={`${batting.tracking.barrel_pct.toFixed(1)}%`} />
-              <StatRow label="평균 EV"    value={`${batting.tracking.avg_ev.toFixed(1)}`} />
+            <div className="space-y-2" data-testid="tracking-stats">
+              <StatRow label="하드힛%"    value={`${batting.tracking.hard_hit_pct.toFixed(1)}%`} data-testid="stat-hard_hit_pct" />
+              <StatRow label="배럴%"      value={`${batting.tracking.barrel_pct.toFixed(1)}%`}   data-testid="stat-barrel_pct" />
+              <StatRow label="평균 EV"    value={`${batting.tracking.avg_ev.toFixed(1)}`}         data-testid="stat-avg_ev" />
               <StatRow label="스위트스팟%" value={`${batting.tracking.sweet_spot_pct.toFixed(1)}%`} />
               <StatRow label="Chase%"     value={`${batting.tracking.chase_pct.toFixed(1)}%`} />
               <StatRow label="Whiff%"     value={`${batting.tracking.whiff_pct.toFixed(1)}%`} />
@@ -280,10 +316,11 @@ function BatterView({ batting }: { batting: BattingData | null }) {
         )}
       </div>
 
+      {/* 중앙: 퍼센타일 바 + 레이더 차트 */}
       <div className="space-y-4">
         <SectionTitle>퍼센타일 랭킹</SectionTitle>
         {batting ? (
-          <div className="bg-white rounded-lg shadow p-4 space-y-1">
+          <div className="bg-white rounded-lg shadow p-4 space-y-1" data-testid="batter-percentile-section">
             <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">생산 지표</p>
             <PercentileBar label="WAR"   value={batting.sabermetrics.war.toFixed(1)}  percentile={batting.percentiles.war ?? 50} />
             <PercentileBar label="wRC+"  value={String(batting.sabermetrics.wrc_plus)} percentile={batting.percentiles.wrc_plus ?? 50} />
@@ -301,13 +338,46 @@ function BatterView({ batting }: { batting: BattingData | null }) {
             </div>
           </div>
         ) : <SkeletonBlock height="300px" />}
+
+        {batting && radarPlayers.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-4">
+            <SectionTitle>레이더 차트</SectionTitle>
+            <RadarChart players={radarPlayers} stats={RADAR_STATS} />
+          </div>
+        )}
       </div>
 
+      {/* 우측: 스프레이 차트 + 존별 히트맵 */}
       <div className="space-y-4">
-        <SectionTitle>타구 데이터</SectionTitle>
-        <div className="bg-white rounded-lg shadow p-4 flex items-center justify-center h-40 text-sm text-[var(--color-text-muted)]">
-          스프레이 차트 (Goal 10에서 구현)
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between mb-2">
+            <SectionTitle>스프레이 차트</SectionTitle>
+            <select
+              className="text-xs border rounded px-1 py-0.5"
+              value={sprayColorBy}
+              onChange={e => setSprayColorBy(e.target.value as 'result' | 'exit_velocity')}
+              data-testid="spray-color-select"
+            >
+              <option value="result">결과별</option>
+              <option value="exit_velocity">타구속도</option>
+            </select>
+          </div>
+          <div className="flex justify-center" data-testid="spray-chart-container">
+            <SprayChart
+              data={battedBalls?.spray_data ?? []}
+              colorBy={sprayColorBy}
+            />
+          </div>
         </div>
+
+        {zoneData.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-4">
+            <SectionTitle>존별 타율 히트맵</SectionTitle>
+            <div className="flex justify-center" data-testid="batter-zone-map-container">
+              <StrikeZoneMap data={zoneData} colorBy="batting_avg" />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
