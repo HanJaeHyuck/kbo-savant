@@ -97,3 +97,41 @@ export interface LeaderboardRow {
   position: string
   [key: string]: number | string
 }
+
+// ── 선수 상세 확장 ──────────────────────────────
+
+export interface PitchLocation {
+  plate_x: number
+  plate_z: number
+  pitch_type: string
+  result: string
+}
+
+export interface PitchCountRow {
+  count: string
+  pitches: number
+  breakdown: { pitch_type: string; pct: number }[]
+}
+
+export interface CareerRow {
+  season: number
+  [key: string]: number | null
+}
+
+export interface PitchZoneMapProps {
+  data: PitchLocation[]
+  colorBy?: 'pitch_type' | 'result'
+  width?: number
+  height?: number
+}
+
+export interface PitchCountBreakdownProps {
+  data: PitchCountRow[]
+}
+
+export interface CareerSplitsTableProps {
+  data: CareerRow[]
+  type: 'batter' | 'pitcher'
+  selectedYear: number
+  onYearSelect: (year: number) => void
+}

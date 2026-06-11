@@ -273,6 +273,44 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         key=lambda x: x["game_date"],
     )
 
+    # 투구 탄착군 (raw 좌표)
+    locations = [
+        {
+            "plate_x":    p.plate_x,
+            "plate_z":    p.plate_z,
+            "pitch_type": p.pitch_type or "기타",
+            "result":     p.result,
+        }
+        for p in pitches
+        if p.plate_x is not None and p.plate_z is not None
+    ]
+
+    # 볼카운트별 구종 구성
+    count_map: dict = {}
+    for p in pitches:
+        if p.balls is None or p.strikes is None:
+            continue
+        key = f"{p.balls}-{p.strikes}"
+        c = count_map.setdefault(key, {"pitches": 0, "types": {}})
+        c["pitches"] += 1
+        pt = p.pitch_type or "기타"
+        c["types"][pt] = c["types"].get(pt, 0) + 1
+
+    count_breakdown = [
+        {
+            "count":    key,
+            "pitches":  d["pitches"],
+            "breakdown": sorted(
+                [
+                    {"pitch_type": pt, "pct": round(n / d["pitches"] * 100, 1)}
+                    for pt, n in d["types"].items()
+                ],
+                key=lambda x: -x["pct"],
+            ),
+        }
+        for key, d in sorted(count_map.items())
+    ]
+
     return {
         "player_id":      player_id,
         "season":         season,
@@ -280,6 +318,8 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         "pitch_mix":      pitch_mix,
         "zone_data":      zone_data,
         "velocity_trend": velocity_trend,
+        "locations":      locations,
+        "count_breakdown": count_breakdown,
     }
 
 

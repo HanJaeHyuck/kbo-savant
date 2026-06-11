@@ -30,3 +30,13 @@ export const getBattedBalls = async (id: number, season: number) => {
   const { data } = await apiClient.get(`/api/players/${id}/batted-balls`, { params: { season } })
   return data
 }
+
+export const getCareerBatting = async (id: number) => {
+  const { data } = await apiClient.get(`/api/players/${id}/career/batting`)
+  return data
+}
+
+export const getCareerPitching = async (id: number) => {
+  const { data } = await apiClient.get(`/api/players/${id}/career/pitching`)
+  return data
+}
