@@ -71,6 +71,10 @@ const TOOLTIPS: Record<string, string> = {
   '하드힛%': '강한 타구(150km/h 이상) 비율',
   '배럴%': '최적 타구(타구속도+발사각) 비율',
   '평균 EV': '평균 타구속도',
+  BABIP: '인플레이 타구 타율 (운/타구질 성분)',
+  '허용 Barrel%': '허용 타구 중 배럴 비율 (낮을수록 우수)',
+  'BB%': '볼넷 허용 비율 (낮을수록 우수)',
+  '허용 BABIP': '인플레이 허용 타율 (낮을수록 우수)',
 }
 
 export default function PlayerDetail() {
@@ -291,7 +295,7 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
       <SubLabel>핵심 가치 지표</SubLabel>
       <PercentileBar label="WAR" value={pitching.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
       <PercentileBar label="ERA-" value={pitching.sabermetrics.era_minus.toFixed(0)} percentile={pc.era_minus ?? 50} tooltip={TOOLTIPS['ERA-']} />
-      <PercentileBar label="FIP" value={pitching.sabermetrics.fip.toFixed(2)} percentile={pc.fip ?? 50} tooltip={TOOLTIPS.FIP} invertColor />
+      <PercentileBar label="FIP" value={pitching.sabermetrics.fip.toFixed(2)} percentile={pc.fip ?? 50} tooltip={TOOLTIPS.FIP} />
       <Divider />
       <SubLabel>구위 지표</SubLabel>
       <PercentileBar label="CSW%" value={`${pitching.tracking.csw_pct.toFixed(1)}%`} percentile={pc.csw_pct ?? 50} tooltip={TOOLTIPS['CSW%']} />
@@ -300,8 +304,13 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
       <PercentileBar label="Chase%" value={`${pitching.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} />
       <Divider />
       <SubLabel>허용 타구질 (낮을수록 우수)</SubLabel>
-      <PercentileBar label="허용 HH%" value={`${pitching.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['허용 HH%']} invertColor />
-      <PercentileBar label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} percentile={pc.avg_ev_allowed ?? 50} tooltip={TOOLTIPS['허용 EV']} invertColor />
+      <PercentileBar label="허용 HH%" value={`${pitching.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['허용 HH%']} />
+      <PercentileBar label="허용 Barrel%" value={`${pitching.tracking.barrel_pct.toFixed(1)}%`} percentile={pc.barrel_pct ?? 50} tooltip={TOOLTIPS['허용 Barrel%']} />
+      <PercentileBar label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} percentile={pc.avg_ev_allowed ?? 50} tooltip={TOOLTIPS['허용 EV']} />
+      <Divider />
+      <SubLabel>제구 (낮을수록 우수)</SubLabel>
+      <PercentileBar label="BB%" value={`${pitching.sabermetrics.bb_pct.toFixed(1)}%`} percentile={pc.bb_pct ?? 50} tooltip={TOOLTIPS['BB%']} />
+      <PercentileBar label="허용 BABIP" value={pitching.sabermetrics.babip.toFixed(3).replace(/^0/, '')} percentile={pc.babip ?? 50} tooltip={TOOLTIPS['허용 BABIP']} />
     </div>
   )
 }
@@ -331,6 +340,7 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
         <PercentileBar label="WAR" value={batting.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
         <PercentileBar label="wRC+" value={String(batting.sabermetrics.wrc_plus)} percentile={pc.wrc_plus ?? 50} tooltip={TOOLTIPS['wRC+']} />
         <PercentileBar label="OPS" value={batting.classic.ops.toFixed(3).replace(/^0/, '')} percentile={pc.ops ?? 50} tooltip={TOOLTIPS.OPS} />
+        <PercentileBar label="BABIP" value={batting.sabermetrics.babip.toFixed(3).replace(/^0/, '')} percentile={pc.babip ?? 50} tooltip={TOOLTIPS.BABIP} />
         <Divider />
         <SubLabel>타구 질</SubLabel>
         <PercentileBar label="하드힛%" value={`${batting.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['하드힛%']} />
@@ -338,8 +348,8 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
         <PercentileBar label="평균 EV" value={`${batting.tracking.avg_ev.toFixed(1)}`} percentile={pc.avg_ev ?? 50} tooltip={TOOLTIPS['평균 EV']} />
         <Divider />
         <SubLabel>선구안 (낮을수록 우수)</SubLabel>
-        <PercentileBar label="Chase%" value={`${batting.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} invertColor />
-        <PercentileBar label="Whiff%" value={`${batting.tracking.whiff_pct.toFixed(1)}%`} percentile={pc.whiff_pct ?? 50} tooltip={TOOLTIPS['Whiff%']} invertColor />
+        <PercentileBar label="Chase%" value={`${batting.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} />
+        <PercentileBar label="Whiff%" value={`${batting.tracking.whiff_pct.toFixed(1)}%`} percentile={pc.whiff_pct ?? 50} tooltip={TOOLTIPS['Whiff%']} />
       </div>
       <div className="bg-white rounded-lg shadow p-4">
         <SectionTitle>레이더 차트</SectionTitle>

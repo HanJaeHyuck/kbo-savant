@@ -20,7 +20,7 @@ export default function PercentileBar({
       <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
         <div
           className="absolute left-0 top-0 h-full rounded-full transition-all"
-          style={{ width: `${percentile}%`, backgroundColor: color }}
+          style={{ width: `${displayPercentile}%`, backgroundColor: color }}
           data-percentile-level={level}
           data-testid="percentile-bar-fill"
         />
@@ -30,9 +30,9 @@ export default function PercentileBar({
         <div
           className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
           style={{ backgroundColor: color }}
-          aria-label={`퍼센타일 ${percentile}`}
+          aria-label={`퍼센타일 ${displayPercentile}`}
         >
-          {percentile}
+          {displayPercentile}
         </div>
         <span className="text-xs font-mono text-[var(--color-text-primary)]">{value}</span>
       </div>

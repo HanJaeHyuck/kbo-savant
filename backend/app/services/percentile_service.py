@@ -8,18 +8,18 @@ from app.services.stat_calculator import calc_percentile
 
 # 높을수록 좋은 타자 지표
 BATTING_HIGHER_BETTER = {
-    "war", "wrc_plus", "ops", "woba", "obp", "slg", "avg",
+    "war", "wrc_plus", "ops", "woba", "obp", "slg", "avg", "babip",
     "hard_hit_pct", "barrel_pct", "sweet_spot_pct", "avg_ev", "hr",
 }
 # 낮을수록 좋은 타자 지표
 BATTING_LOWER_BETTER = {"chase_pct", "whiff_pct", "k"}
 
 # 높을수록 좋은 투수 지표
-PITCHING_HIGHER_BETTER = {"war", "k_pct", "csw_pct", "lob_pct"}
+PITCHING_HIGHER_BETTER = {"war", "k_pct", "csw_pct", "lob_pct", "whiff_pct", "chase_pct"}
 # 낮을수록 좋은 투수 지표
 PITCHING_LOWER_BETTER = {
     "era", "fip", "xfip", "era_minus", "fip_minus",
-    "bb_pct", "hr9", "hard_hit_pct", "barrel_pct", "avg_ev_allowed",
+    "bb_pct", "hr9", "babip", "hard_hit_pct", "barrel_pct", "avg_ev_allowed",
 }
 
 BATTING_STATS_FIELDS = list(BATTING_HIGHER_BETTER | BATTING_LOWER_BETTER)

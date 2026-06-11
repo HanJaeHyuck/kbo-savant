@@ -66,11 +66,16 @@ def get_batting_stats_response(player_id: int, season: int, db: Session) -> dict
     all_pcts = _cached_batting_percentiles(season, db)
     raw = all_pcts.get(player_id, {})
     percentiles = {
+        "war":          raw.get("war", 50),
+        "wrc_plus":     raw.get("wrc_plus", 50),
+        "ops":          raw.get("ops", 50),
+        "babip":        raw.get("babip", 50),
         "hard_hit_pct": raw.get("hard_hit_pct", 50),
         "barrel_pct":   raw.get("barrel_pct", 50),
         "avg_ev":       raw.get("avg_ev", 50),
-        "wrc_plus":     raw.get("wrc_plus", 50),
-        "war":          raw.get("war", 50),
+        "sweet_spot_pct": raw.get("sweet_spot_pct", 50),
+        "chase_pct":    raw.get("chase_pct", 50),
+        "whiff_pct":    raw.get("whiff_pct", 50),
     }
 
     return {
@@ -151,11 +156,18 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
     all_pcts = _cached_pitching_percentiles(season, db)
     raw = all_pcts.get(player_id, {})
     percentiles = {
+        "war":          raw.get("war", 50),
         "era_minus":    raw.get("era_minus", 50),
         "fip":          raw.get("fip", 50),
-        "hard_hit_pct": raw.get("hard_hit_pct", 50),
         "csw_pct":      raw.get("csw_pct", 50),
-        "war":          raw.get("war", 50),
+        "whiff_pct":    raw.get("whiff_pct", 50),
+        "k_pct":        raw.get("k_pct", 50),
+        "chase_pct":    raw.get("chase_pct", 50),
+        "hard_hit_pct": raw.get("hard_hit_pct", 50),
+        "barrel_pct":   raw.get("barrel_pct", 50),
+        "avg_ev_allowed": raw.get("avg_ev_allowed", 50),
+        "bb_pct":       raw.get("bb_pct", 50),
+        "babip":        raw.get("babip", 50),
     }
 
     return {
