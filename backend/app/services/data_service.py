@@ -65,6 +65,15 @@ def get_batting_stats_response(player_id: int, season: int, db: Session) -> dict
     # 실제 퍼센타일 (리그 내 위치)
     all_pcts = _cached_batting_percentiles(season, db)
     raw = all_pcts.get(player_id, {})
+
+    # 기대 스탯 (xBA/xSLG/xwOBA)
+    from app.services.expected_stats_service import get_batter_expected
+    xs = get_batter_expected(player_id, season, db)
+    if stat:
+        tracking["xba"] = xs["xba"]
+        tracking["xslg"] = xs["xslg"]
+        tracking["xwoba"] = xs["xwoba"]
+
     percentiles = {
         "war":          raw.get("war", 50),
         "wrc_plus":     raw.get("wrc_plus", 50),
@@ -76,6 +85,9 @@ def get_batting_stats_response(player_id: int, season: int, db: Session) -> dict
         "sweet_spot_pct": raw.get("sweet_spot_pct", 50),
         "chase_pct":    raw.get("chase_pct", 50),
         "whiff_pct":    raw.get("whiff_pct", 50),
+        "xba":          xs["percentiles"]["xba"],
+        "xslg":         xs["percentiles"]["xslg"],
+        "xwoba":        xs["percentiles"]["xwoba"],
     }
 
     return {
@@ -155,6 +167,21 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
 
     all_pcts = _cached_pitching_percentiles(season, db)
     raw = all_pcts.get(player_id, {})
+
+    # 기대 스탯(xERA) + Run Value
+    from app.services.expected_stats_service import get_pitcher_expected
+    from app.services.run_value_service import get_pitcher_run_value
+    xs = get_pitcher_expected(player_id, season, db)
+    rv = get_pitcher_run_value(player_id, season, db)
+    if stat:
+        tracking["xera"] = xs["xera"]
+    run_value = {
+        "pitching_rv": rv["pitching_rv"],
+        "fastball_rv": rv["fastball_rv"],
+        "breaking_rv": rv["breaking_rv"],
+        "offspeed_rv": rv["offspeed_rv"],
+    }
+
     percentiles = {
         "war":          raw.get("war", 50),
         "era_minus":    raw.get("era_minus", 50),
@@ -168,6 +195,11 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
         "avg_ev_allowed": raw.get("avg_ev_allowed", 50),
         "bb_pct":       raw.get("bb_pct", 50),
         "babip":        raw.get("babip", 50),
+        "xera":         xs["percentiles"]["xera"],
+        "pitching_rv":  rv["percentiles"]["pitching_rv"],
+        "fastball_rv":  rv["percentiles"]["fastball_rv"],
+        "breaking_rv":  rv["percentiles"]["breaking_rv"],
+        "offspeed_rv":  rv["percentiles"]["offspeed_rv"],
     }
 
     return {
@@ -176,6 +208,7 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
         "classic": classic,
         "sabermetrics": saber,
         "tracking": tracking,
+        "run_value": run_value,
         "percentiles": percentiles,
     }
 

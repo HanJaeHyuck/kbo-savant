@@ -32,7 +32,8 @@ interface PitchingData {
   season: number
   classic: { games: number; gs: number; ip: number; wins: number; losses: number; era: number }
   sabermetrics: { fip: number; xfip: number; era_minus: number; fip_minus: number; k_pct: number; bb_pct: number; babip: number; war: number }
-  tracking: { avg_ev_allowed: number; hard_hit_pct: number; barrel_pct: number; csw_pct: number; whiff_pct: number; chase_pct: number }
+  tracking: { avg_ev_allowed: number; hard_hit_pct: number; barrel_pct: number; csw_pct: number; whiff_pct: number; chase_pct: number; xera?: number | null }
+  run_value: { pitching_rv: number; fastball_rv: number; breaking_rv: number; offspeed_rv: number }
   percentiles: Record<string, number>
 }
 
@@ -49,7 +50,7 @@ interface BattingData {
   season: number
   classic: { games: number; pa: number; avg: number; obp: number; slg: number; ops: number; hr: number; rbi: number; sb: number }
   sabermetrics: { woba: number; wrc_plus: number; babip: number; war: number }
-  tracking: { hard_hit_pct: number; barrel_pct: number; sweet_spot_pct: number; avg_ev: number; chase_pct: number; whiff_pct: number }
+  tracking: { hard_hit_pct: number; barrel_pct: number; sweet_spot_pct: number; avg_ev: number; chase_pct: number; whiff_pct: number; xba?: number | null; xslg?: number | null; xwoba?: number | null }
   percentiles: Record<string, number>
 }
 
@@ -75,7 +76,21 @@ const TOOLTIPS: Record<string, string> = {
   '허용 Barrel%': '허용 타구 중 배럴 비율 (낮을수록 우수)',
   'BB%': '볼넷 허용 비율 (낮을수록 우수)',
   '허용 BABIP': '인플레이 허용 타율 (낮을수록 우수)',
+  xBA: '타구속도+발사각 기반 기대 타율 (KBO 자체 모델)',
+  xSLG: '타구속도+발사각 기반 기대 장타율',
+  xwOBA: '타구속도+발사각 기반 기대 wOBA',
+  xERA: '허용 타구질 기반 기대 ERA (낮을수록 우수)',
+  'Pitching RV': '볼카운트 기반 투구 득점 기여 (Context-Neutral, 높을수록 우수)',
+  'Fastball RV': '패스트볼 계열 Run Value',
+  'Breaking RV': '브레이킹 계열 Run Value',
+  'Offspeed RV': '오프스피드 계열 Run Value',
 }
+
+// null 허용 수치 포맷
+const fx = (v: number | null | undefined, digits = 3) =>
+  v == null ? '—' : v.toFixed(digits).replace(/^0/, '')
+const frv = (v: number | null | undefined) =>
+  v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1)
 
 export default function PlayerDetail() {
   const { id } = useParams<{ id: string }>()
@@ -296,6 +311,7 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
       <PercentileBar label="WAR" value={pitching.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
       <PercentileBar label="ERA-" value={pitching.sabermetrics.era_minus.toFixed(0)} percentile={pc.era_minus ?? 50} tooltip={TOOLTIPS['ERA-']} />
       <PercentileBar label="FIP" value={pitching.sabermetrics.fip.toFixed(2)} percentile={pc.fip ?? 50} tooltip={TOOLTIPS.FIP} />
+      <PercentileBar label="Pitching RV" value={frv(pitching.run_value?.pitching_rv)} percentile={pc.pitching_rv ?? 50} tooltip={TOOLTIPS['Pitching RV']} />
       <Divider />
       <SubLabel>구위 지표</SubLabel>
       <PercentileBar label="CSW%" value={`${pitching.tracking.csw_pct.toFixed(1)}%`} percentile={pc.csw_pct ?? 50} tooltip={TOOLTIPS['CSW%']} />
@@ -303,10 +319,16 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
       <PercentileBar label="K%" value={`${pitching.sabermetrics.k_pct.toFixed(1)}%`} percentile={pc.k_pct ?? 50} tooltip={TOOLTIPS['K%']} />
       <PercentileBar label="Chase%" value={`${pitching.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} />
       <Divider />
+      <SubLabel>구종별 Run Value</SubLabel>
+      <PercentileBar label="Fastball RV" value={frv(pitching.run_value?.fastball_rv)} percentile={pc.fastball_rv ?? 50} tooltip={TOOLTIPS['Fastball RV']} />
+      <PercentileBar label="Breaking RV" value={frv(pitching.run_value?.breaking_rv)} percentile={pc.breaking_rv ?? 50} tooltip={TOOLTIPS['Breaking RV']} />
+      <PercentileBar label="Offspeed RV" value={frv(pitching.run_value?.offspeed_rv)} percentile={pc.offspeed_rv ?? 50} tooltip={TOOLTIPS['Offspeed RV']} />
+      <Divider />
       <SubLabel>허용 타구질 (낮을수록 우수)</SubLabel>
       <PercentileBar label="허용 HH%" value={`${pitching.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['허용 HH%']} />
       <PercentileBar label="허용 Barrel%" value={`${pitching.tracking.barrel_pct.toFixed(1)}%`} percentile={pc.barrel_pct ?? 50} tooltip={TOOLTIPS['허용 Barrel%']} />
       <PercentileBar label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} percentile={pc.avg_ev_allowed ?? 50} tooltip={TOOLTIPS['허용 EV']} />
+      <PercentileBar label="xERA" value={fx(pitching.tracking.xera, 2)} percentile={pc.xera ?? 50} tooltip={TOOLTIPS.xERA} />
       <Divider />
       <SubLabel>제구 (낮을수록 우수)</SubLabel>
       <PercentileBar label="BB%" value={`${pitching.sabermetrics.bb_pct.toFixed(1)}%`} percentile={pc.bb_pct ?? 50} tooltip={TOOLTIPS['BB%']} />
@@ -346,6 +368,8 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
         <PercentileBar label="하드힛%" value={`${batting.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['하드힛%']} />
         <PercentileBar label="배럴%" value={`${batting.tracking.barrel_pct.toFixed(1)}%`} percentile={pc.barrel_pct ?? 50} tooltip={TOOLTIPS['배럴%']} />
         <PercentileBar label="평균 EV" value={`${batting.tracking.avg_ev.toFixed(1)}`} percentile={pc.avg_ev ?? 50} tooltip={TOOLTIPS['평균 EV']} />
+        <PercentileBar label="xBA" value={fx(batting.tracking.xba)} percentile={pc.xba ?? 50} tooltip={TOOLTIPS.xBA} />
+        <PercentileBar label="xwOBA" value={fx(batting.tracking.xwoba)} percentile={pc.xwoba ?? 50} tooltip={TOOLTIPS.xwOBA} />
         <Divider />
         <SubLabel>선구안 (낮을수록 우수)</SubLabel>
         <PercentileBar label="Chase%" value={`${batting.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} />
