@@ -29,8 +29,16 @@ async def daily_crawl():
 
 
 if __name__ == "__main__":
-    scheduler.start()
-    try:
-        asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
-        scheduler.shutdown()
+    import sys
+
+    # Railway Cron Job: `python crawlers/scheduler.py --once` → 1회 실행 후 종료
+    if "--once" in sys.argv or os.getenv("RUN_MODE") == "once":
+        logging.info("[스케줄러] --once 모드: 크롤링 1회 실행")
+        asyncio.run(daily_crawl())
+    else:
+        # 워커 서비스 모드: 매일 지정 시각에 실행
+        scheduler.start()
+        try:
+            asyncio.get_event_loop().run_forever()
+        except KeyboardInterrupt:
+            scheduler.shutdown()

@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const BASE_URL = ''  // Vite 프록시 사용 (/api → localhost:8000)
+// 개발: '' → Vite 프록시 사용 (/api → localhost:8000)
+// 프로덕션(Vercel): VITE_API_URL(=Railway 백엔드 URL)로 직접 호출
+const BASE_URL = import.meta.env.PROD ? (import.meta.env.VITE_API_URL ?? '') : ''
 
 export class NotFoundError extends Error {
   constructor(message: string) {
