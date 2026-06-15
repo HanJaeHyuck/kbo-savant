@@ -186,6 +186,7 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
         "war":          raw.get("war", 50),
         "era_minus":    raw.get("era_minus", 50),
         "fip":          raw.get("fip", 50),
+        "fip_minus":    raw.get("fip_minus", 50),
         "csw_pct":      raw.get("csw_pct", 50),
         "whiff_pct":    raw.get("whiff_pct", 50),
         "k_pct":        raw.get("k_pct", 50),

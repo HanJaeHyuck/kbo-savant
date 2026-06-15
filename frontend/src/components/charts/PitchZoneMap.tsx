@@ -27,7 +27,7 @@ function Field({ data, colorBy, r, hovered, onHover, big }: {
 }) {
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: big ? 460 : 240 }}
-      data-testid="pitch-zone-map" className="cursor-pointer">
+      data-testid="pitch-zone-map" className="cursor-pointer block mx-auto">
       <rect x={sx(ZONE.xMin)} y={sz(ZONE.zMax)} width={sx(ZONE.xMax) - sx(ZONE.xMin)}
         height={sz(ZONE.zMin) - sz(ZONE.zMax)} fill="none" stroke="#334155" strokeWidth={1.5} />
       {[1, 2].map(i => {

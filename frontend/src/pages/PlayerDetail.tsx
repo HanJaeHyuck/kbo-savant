@@ -60,6 +60,7 @@ interface BattedBallsData { total: number; spray_data: SprayData[]; zone_avg?: Z
 const TOOLTIPS: Record<string, string> = {
   WAR: '대체 선수 대비 기여 승수',
   'ERA-': '리그 평균 대비 ERA (100=평균, 낮을수록 우수)',
+  'FIP-': '리그 평균 대비 FIP (100=평균, 낮을수록 우수)',
   FIP: '수비 무관 평균자책 (낮을수록 우수)',
   'CSW%': '헛스윙 + 루킹 스트라이크 비율',
   'Whiff%': '스윙 대비 헛스윙 비율',
@@ -310,6 +311,7 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
       <PercentileBar label="WAR" value={pitching.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
       <PercentileBar label="ERA-" value={pitching.sabermetrics.era_minus.toFixed(0)} percentile={pc.era_minus ?? 50} tooltip={TOOLTIPS['ERA-']} />
       <PercentileBar label="FIP" value={pitching.sabermetrics.fip.toFixed(2)} percentile={pc.fip ?? 50} tooltip={TOOLTIPS.FIP} />
+      <PercentileBar label="FIP-" value={pitching.sabermetrics.fip_minus.toFixed(0)} percentile={pc.fip_minus ?? 50} tooltip={TOOLTIPS['FIP-']} />
       <PercentileBar label="Pitching RV" value={frv(pitching.run_value?.pitching_rv)} percentile={pc.pitching_rv ?? 50} tooltip={TOOLTIPS['Pitching RV']} />
       <Divider />
       <SubLabel>구위 지표</SubLabel>
@@ -323,13 +325,13 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
       <PercentileBar label="Breaking RV" value={frv(pitching.run_value?.breaking_rv)} percentile={pc.breaking_rv ?? 50} tooltip={TOOLTIPS['Breaking RV']} />
       <PercentileBar label="Offspeed RV" value={frv(pitching.run_value?.offspeed_rv)} percentile={pc.offspeed_rv ?? 50} tooltip={TOOLTIPS['Offspeed RV']} />
       <Divider />
-      <SubLabel>허용 타구질 (낮을수록 우수)</SubLabel>
+      <SubLabel>허용 타구질</SubLabel>
       <PercentileBar label="허용 HH%" value={`${pitching.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['허용 HH%']} />
       <PercentileBar label="허용 Barrel%" value={`${pitching.tracking.barrel_pct.toFixed(1)}%`} percentile={pc.barrel_pct ?? 50} tooltip={TOOLTIPS['허용 Barrel%']} />
       <PercentileBar label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} percentile={pc.avg_ev_allowed ?? 50} tooltip={TOOLTIPS['허용 EV']} />
       <PercentileBar label="xERA" value={fx(pitching.tracking.xera, 2)} percentile={pc.xera ?? 50} tooltip={TOOLTIPS.xERA} />
       <Divider />
-      <SubLabel>제구 (낮을수록 우수)</SubLabel>
+      <SubLabel>제구</SubLabel>
       <PercentileBar label="BB%" value={`${pitching.sabermetrics.bb_pct.toFixed(1)}%`} percentile={pc.bb_pct ?? 50} tooltip={TOOLTIPS['BB%']} />
       <PercentileBar label="허용 BABIP" value={pitching.sabermetrics.babip.toFixed(3).replace(/^0/, '')} percentile={pc.babip ?? 50} tooltip={TOOLTIPS['허용 BABIP']} />
     </div>
@@ -358,7 +360,7 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
         <PercentileBar label="xBA" value={fx(batting.tracking.xba)} percentile={pc.xba ?? 50} tooltip={TOOLTIPS.xBA} />
         <PercentileBar label="xwOBA" value={fx(batting.tracking.xwoba)} percentile={pc.xwoba ?? 50} tooltip={TOOLTIPS.xwOBA} />
         <Divider />
-        <SubLabel>선구안 (낮을수록 우수)</SubLabel>
+        <SubLabel>선구안</SubLabel>
         <PercentileBar label="Chase%" value={`${batting.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} />
         <PercentileBar label="Whiff%" value={`${batting.tracking.whiff_pct.toFixed(1)}%`} percentile={pc.whiff_pct ?? 50} tooltip={TOOLTIPS['Whiff%']} />
     </div>
@@ -490,6 +492,9 @@ function PercentileScale() {
       <div className="flex justify-between text-[9px] text-[var(--color-text-muted)] mt-0.5">
         <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
       </div>
+      <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
+        모든 지표 — 퍼센타일이 <span className="text-[#C0392B] font-semibold">높을수록(빨강) 우수</span>합니다 (허용 지표 포함).
+      </p>
     </div>
   )
 }
