@@ -16,6 +16,8 @@ class Pitch(Base):
     pitch_type = Column(String(20))
     velocity = Column(Float)
     spin_rate = Column(Integer)
+    h_break = Column(Float)   # 수평 무브먼트 (cm, +arm side)
+    v_break = Column(Float)   # 유효 수직 무브먼트 (cm, +rise/carry)
     plate_x = Column(Float)
     plate_z = Column(Float)
     balls = Column(Integer)

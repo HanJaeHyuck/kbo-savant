@@ -11,12 +11,13 @@ import SprayChart from '../components/charts/SprayChart'
 import RadarChart from '../components/charts/RadarChart'
 import PitchZoneMap from '../components/charts/PitchZoneMap'
 import PitchCountBreakdown from '../components/charts/PitchCountBreakdown'
+import MovementProfile from '../components/charts/MovementProfile'
 import CareerSplitsTable from '../components/tables/CareerSplitsTable'
 import {
   getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls,
   getCareerBatting, getCareerPitching,
 } from '../api/players'
-import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow } from '../types'
+import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint } from '../types'
 
 interface PlayerInfo {
   id: number
@@ -44,6 +45,7 @@ interface PitchesData {
   velocity_trend: VeloPoint[]
   locations: PitchLocation[]
   count_breakdown: PitchCountRow[]
+  movement: MovementPoint[]
 }
 
 interface BattingData {
@@ -232,20 +234,16 @@ export default function PlayerDetail() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-8 space-y-6">
-        {/* 상단 3열: 커리어 테이블 | 퍼센타일 | 차트 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(300px,340px)_minmax(280px,320px)] gap-6 items-start">
+        {/* 히어로 3열: 사진+정보 | 퍼센타일 | 차트 */}
+        <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(320px,360px)_1fr] gap-6 items-start">
 
-          {/* 좌측: 연도별 커리어 테이블 */}
+          {/* 좌측: 선수 사진 + 트래킹 지표 */}
           <div className="space-y-3 min-w-0">
-            <SectionTitle>연도별 커리어 스탯</SectionTitle>
-            <CareerSplitsTable
-              data={career}
-              type={isPitcher ? 'pitcher' : 'batter'}
-              selectedYear={selectedYear}
-              onYearSelect={setSelectedYear}
-            />
-            <p className="text-[10px] text-[var(--color-text-muted)]">연도를 클릭하면 퍼센타일·차트가 해당 시즌으로 갱신됩니다.</p>
-            {/* 시즌 트래킹 지표 카드 (테스트 id 보존) */}
+            <PlayerPhoto name={playerInfo.name} position={playerInfo.position} />
+            <div className="bg-white rounded-lg shadow p-3 text-center">
+              <p className="text-xs text-[var(--color-text-secondary)]">{playerInfo.team}</p>
+              <p className="text-[11px] text-[var(--color-text-muted)]">{playerInfo.bats}타 {playerInfo.throws}투 · {playerInfo.birth_date ?? ''}</p>
+            </div>
             {isPitcher && pitching && (
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{selectedYear} 트래킹 지표</p>
@@ -271,10 +269,6 @@ export default function PlayerDetail() {
                 </div>
               </div>
             )}
-            {/* 좌측 추가 차트 (높이 균형) */}
-            {isPitcher
-              ? <PitcherLeftExtras pitches={pitches} />
-              : <BatterLeftExtras batting={batting} />}
           </div>
 
           {/* 중앙: 퍼센타일 랭킹 */}
@@ -288,13 +282,29 @@ export default function PlayerDetail() {
               : <BatterPercentiles batting={batting} />}
           </div>
 
-          {/* 우측: 차트 (모든 차트를 우측에 쌓아 긴 퍼센타일 컬럼과 높이 균형) */}
+          {/* 우측: 핵심 차트 (투수: 무브먼트+구종구성 / 타자: 스프레이+레이더) */}
           <div className="space-y-4 min-w-0">
             {isPitcher
-              ? <PitcherSideCharts pitches={pitches} />
-              : <BatterSideCharts battedBalls={battedBalls} />}
+              ? <PitcherHeroCharts pitches={pitches} />
+              : <BatterHeroCharts battedBalls={battedBalls} batting={batting} />}
           </div>
         </div>
+
+        {/* 전체너비: 연도별 커리어 스탯 */}
+        <div className="space-y-2">
+          <SectionTitle>연도별 커리어 스탯 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 연도 클릭 시 위/아래 전부 갱신</span></SectionTitle>
+          <CareerSplitsTable
+            data={career}
+            type={isPitcher ? 'pitcher' : 'batter'}
+            selectedYear={selectedYear}
+            onYearSelect={setSelectedYear}
+          />
+        </div>
+
+        {/* 전체너비: 상세 차트 그리드 */}
+        {isPitcher
+          ? <PitcherChartGrid pitches={pitches} />
+          : <BatterChartGrid battedBalls={battedBalls} />}
       </main>
     </div>
   )
@@ -367,57 +377,91 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
   )
 }
 
-/* ── 좌측 추가: 타자 레이더 ──────────────────────── */
-function BatterLeftExtras({ batting }: { batting: BattingData | null }) {
-  if (!batting) return null
-  const pc = batting.percentiles
-  const radarPlayers = [{
-    name: '퍼센타일',
-    data: {
-      WAR: pc.war ?? 50, 'wRC+': pc.wrc_plus ?? 50, '하드힛%': pc.hard_hit_pct ?? 50,
-      '배럴%': pc.barrel_pct ?? 50, '평균EV': pc.avg_ev ?? 50, 'Chase%': pc.chase_pct ?? 50,
-    },
-  }]
+/* ── 선수 사진 플레이스홀더 ──────────────────────── */
+function PlayerPhoto({ name, position }: { name: string; position: string }) {
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <SectionTitle>레이더 차트</SectionTitle>
-      <RadarChart players={radarPlayers} stats={RADAR_STATS} />
+    <div className="bg-[#0A2240] rounded-lg shadow flex flex-col items-center justify-center py-6" data-testid="player-photo">
+      <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
+        <circle cx="42" cy="42" r="42" fill="#13315C" />
+        <circle cx="42" cy="32" r="15" fill="#9DB2D6" />
+        <path d="M16 78 Q42 50 68 78 Z" fill="#9DB2D6" />
+      </svg>
+      <p className="text-white text-base font-bold mt-2">{name}</p>
+      <p className="text-blue-200 text-xs">{position}</p>
     </div>
   )
 }
 
-/* ── 좌측 추가: 투수 구속트렌드 + 볼카운트 ────────── */
-function PitcherLeftExtras({ pitches }: { pitches: PitchesData | null }) {
-  if (!pitches) return null
+/* ── 투수 히어로 차트 (Movement Profile + 구종 구성) ── */
+function PitcherHeroCharts({ pitches }: { pitches: PitchesData | null }) {
+  if (!pitches) return <SkeletonBlock height="420px" />
   return (
     <>
-      {pitches.velocity_trend.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4">
-          <SectionTitle>구속 트렌드</SectionTitle>
-          <VeloTrend data={pitches.velocity_trend} />
-        </div>
-      )}
       <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>볼카운트별 구종</SectionTitle>
-        <PitchCountBreakdown data={pitches.count_breakdown} />
+        <SectionTitle>Movement Profile <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별 수평×수직 무브먼트</span></SectionTitle>
+        <MovementProfile data={pitches.movement} />
       </div>
-    </>
-  )
-}
-
-/* ── 투수 우측 차트 (구종구성·구속트렌드·탄착군·존히트맵·볼카운트) ── */
-function PitcherSideCharts({ pitches }: { pitches: PitchesData | null }) {
-  const [zoneMetric, setZoneMetric] = useState<'batting_avg' | 'whiff_pct'>('batting_avg')
-  const [locColorBy, setLocColorBy] = useState<'pitch_type' | 'result'>('pitch_type')
-  if (!pitches) return <SkeletonBlock height="600px" />
-  return (
-    <>
       {pitches.pitch_mix.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4">
           <SectionTitle>구종 구성</SectionTitle>
           <PitchMix data={pitches.pitch_mix} season={2024} />
         </div>
       )}
+    </>
+  )
+}
+
+/* ── 타자 히어로 차트 (스프레이 + 레이더) ──────────── */
+function BatterHeroCharts({ battedBalls, batting }: { battedBalls: BattedBallsData | null; batting: BattingData | null }) {
+  const [sprayColorBy, setSprayColorBy] = useState<'result' | 'exit_velocity'>('result')
+  const pc = batting?.percentiles ?? {}
+  const radarPlayers = batting ? [{
+    name: '퍼센타일',
+    data: {
+      WAR: pc.war ?? 50, 'wRC+': pc.wrc_plus ?? 50, '하드힛%': pc.hard_hit_pct ?? 50,
+      '배럴%': pc.barrel_pct ?? 50, '평균EV': pc.avg_ev ?? 50, 'Chase%': pc.chase_pct ?? 50,
+    },
+  }] : []
+  return (
+    <>
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex items-center justify-between mb-2">
+          <SectionTitle>스프레이 차트</SectionTitle>
+          <select className="text-xs border rounded px-1 py-0.5" value={sprayColorBy}
+            onChange={e => setSprayColorBy(e.target.value as 'result' | 'exit_velocity')} data-testid="spray-color-select">
+            <option value="result">결과별</option>
+            <option value="exit_velocity">타구속도</option>
+          </select>
+        </div>
+        <div className="flex justify-center" data-testid="spray-chart-container">
+          <SprayChart data={battedBalls?.spray_data ?? []} colorBy={sprayColorBy} />
+        </div>
+      </div>
+      {radarPlayers.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <SectionTitle>레이더 차트</SectionTitle>
+          <RadarChart players={radarPlayers} stats={RADAR_STATS} />
+        </div>
+      )}
+    </>
+  )
+}
+
+/* ── 투수 하단 차트 그리드 (구속/탄착군/존/볼카운트) ── */
+function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
+  const [zoneMetric, setZoneMetric] = useState<'batting_avg' | 'whiff_pct'>('batting_avg')
+  const [locColorBy, setLocColorBy] = useState<'pitch_type' | 'result'>('pitch_type')
+  if (!pitches) return <SkeletonBlock height="300px" />
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-white rounded-lg shadow p-4">
+        <SectionTitle>구속 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별</span></SectionTitle>
+        <VeloTrend data={pitches.velocity_trend} />
+      </div>
+      <div className="bg-white rounded-lg shadow p-4">
+        <SectionTitle>볼카운트별 구종</SectionTitle>
+        <PitchCountBreakdown data={pitches.count_breakdown} />
+      </div>
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center justify-between mb-2">
           <SectionTitle>투구 탄착군</SectionTitle>
@@ -444,40 +488,25 @@ function PitcherSideCharts({ pitches }: { pitches: PitchesData | null }) {
           <StrikeZoneMap data={pitches.zone_data} colorBy={zoneMetric} />
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
-/* ── 타자 우측 차트 (스프레이 + 존별 히트맵) ────────── */
-function BatterSideCharts({ battedBalls }: { battedBalls: BattedBallsData | null }) {
-  const [sprayColorBy, setSprayColorBy] = useState<'result' | 'exit_velocity'>('result')
+/* ── 타자 하단 차트 그리드 (존별 히트맵) ──────────── */
+function BatterChartGrid({ battedBalls }: { battedBalls: BattedBallsData | null }) {
   const zoneData: ZoneData[] = battedBalls?.zone_avg?.map(z => ({
     zone: z.zone, pitches: z.attempts, batting_avg: z.avg, whiff_pct: 0,
   })) ?? []
+  if (zoneData.length === 0) return null
   return (
-    <>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex items-center justify-between mb-2">
-          <SectionTitle>스프레이 차트</SectionTitle>
-          <select className="text-xs border rounded px-1 py-0.5" value={sprayColorBy}
-            onChange={e => setSprayColorBy(e.target.value as 'result' | 'exit_velocity')} data-testid="spray-color-select">
-            <option value="result">결과별</option>
-            <option value="exit_velocity">타구속도</option>
-          </select>
-        </div>
-        <div className="flex justify-center" data-testid="spray-chart-container">
-          <SprayChart data={battedBalls?.spray_data ?? []} colorBy={sprayColorBy} />
+        <SectionTitle>존별 타율 히트맵</SectionTitle>
+        <div className="flex justify-center" data-testid="batter-zone-map-container">
+          <StrikeZoneMap data={zoneData} colorBy="batting_avg" />
         </div>
       </div>
-      {zoneData.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4">
-          <SectionTitle>존별 타율 히트맵</SectionTitle>
-          <div className="flex justify-center" data-testid="batter-zone-map-container">
-            <StrikeZoneMap data={zoneData} colorBy="batting_avg" />
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   )
 }
 

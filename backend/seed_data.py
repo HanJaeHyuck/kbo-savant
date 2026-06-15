@@ -11,16 +11,10 @@ from app.database import SessionLocal, engine, Base
 from app.models import Player, BattingStat, PitchingStat, Pitch, BattedBall
 
 random.seed(42)
+# 스키마 변경(무브먼트 컬럼 등)을 반영하기 위해 전체 재생성
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()
-
-# ── 초기화 ──────────────────────────────────────────
-db.query(Pitch).delete()
-db.query(BattedBall).delete()
-db.query(BattingStat).delete()
-db.query(PitchingStat).delete()
-db.query(Player).delete()
-db.commit()
 
 SEASONS = [2022, 2023, 2024]
 TEAMS = ["키움 히어로즈", "KIA 타이거즈", "SSG 랜더스", "롯데 자이언츠", "한화 이글스",
@@ -163,6 +157,8 @@ print(f"투수 스탯 {pcount}건 등록 완료")
 PITCH_TYPES = ["직구", "슬라이더", "체인지업", "커브"]
 PITCH_WEIGHTS = [0.45, 0.27, 0.16, 0.12]
 VELO = {"직구": (145, 152), "슬라이더": (128, 136), "체인지업": (124, 131), "커브": (114, 123)}
+# 구종별 평균 무브먼트 (h_break: +arm side, v_break: +rise) cm
+BREAK = {"직구": (8, 45), "슬라이더": (-11, 18), "체인지업": (14, 24), "커브": (-9, -10)}
 ZONES = list(range(1, 10)) + [11, 12, 13, 14]
 RESULTS = ["스트라이크", "볼", "헛스윙", "파울", "인플레이", "루킹스트라이크"]
 RESULT_W = [0.20, 0.22, 0.12, 0.18, 0.18, 0.10]
@@ -182,10 +178,13 @@ for season in SEASONS:
             for i in range(random.randint(11, 17)):
                 pt = random.choices(PITCH_TYPES, PITCH_WEIGHTS)[0]
                 vlo, vhi = VELO[pt]
+                hb, vb = BREAK[pt]
                 pitch_rows.append(Pitch(
                     game_id=f"{season}G{g:02d}_{ppid}", pitcher_id=ppid, batter_id=random.choice(batter_ids),
                     season=season, game_date=gdate, inning=random.randint(1, 9), pitch_number=i + 1,
                     pitch_type=pt, velocity=round(random.uniform(vlo, vhi) + velo_boost + jitter(0, 0.6), 1),
+                    spin_rate=int(jitter(2300, 250)),
+                    h_break=round(jitter(hb, 4), 1), v_break=round(jitter(vb, 5), 1),
                     zone=random.choice(ZONES),
                     plate_x=round(random.uniform(-0.55, 0.55), 2),
                     plate_z=round(random.uniform(0.05, 1.15), 2),

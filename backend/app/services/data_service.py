@@ -265,10 +265,14 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
     for p in pitches:
         pt = p.pitch_type or "기타"
         if pt not in pitch_type_map:
-            pitch_type_map[pt] = {"count": 0, "velocities": []}
+            pitch_type_map[pt] = {"count": 0, "velocities": [], "hb": [], "vb": []}
         pitch_type_map[pt]["count"] += 1
         if p.velocity:
             pitch_type_map[pt]["velocities"].append(p.velocity)
+        if p.h_break is not None:
+            pitch_type_map[pt]["hb"].append(p.h_break)
+        if p.v_break is not None:
+            pitch_type_map[pt]["vb"].append(p.v_break)
 
     pitch_mix = [
         {
@@ -305,19 +309,35 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         for zone, d in zone_map.items()
     ]
 
-    # 날짜별 구속 트렌드
+    # 구종별 무브먼트 프로파일 (avg h_break × v_break)
+    def _avg(xs):
+        return round(sum(xs) / len(xs), 1) if xs else 0.0
+    movement = [
+        {
+            "pitch_type":   pt,
+            "count":        d["count"],
+            "pct":          round(d["count"] / total * 100, 1) if total else 0.0,
+            "avg_velocity": round(sum(d["velocities"]) / len(d["velocities"]), 1) if d["velocities"] else 0.0,
+            "h_break":      _avg(d["hb"]),
+            "v_break":      _avg(d["vb"]),
+        }
+        for pt, d in pitch_type_map.items()
+    ]
+
+    # 날짜별 구속 트렌드 (전체 + 구종별 멀티시리즈)
     from collections import defaultdict
-    date_velo: dict = defaultdict(list)
+    date_all: dict = defaultdict(list)
+    date_type: dict = defaultdict(lambda: defaultdict(list))
     for p in pitches:
         if p.velocity and p.game_date:
-            date_velo[p.game_date].append(p.velocity)
-    velocity_trend = sorted(
-        [
-            {"game_date": str(d), "avg_velocity": round(sum(vs) / len(vs), 1)}
-            for d, vs in date_velo.items()
-        ],
-        key=lambda x: x["game_date"],
-    )
+            date_all[p.game_date].append(p.velocity)
+            date_type[p.game_date][p.pitch_type or "기타"].append(p.velocity)
+    velocity_trend = []
+    for d in sorted(date_all.keys()):
+        row = {"game_date": str(d), "avg_velocity": round(sum(date_all[d]) / len(date_all[d]), 1)}
+        for pt, vs in date_type[d].items():
+            row[pt] = round(sum(vs) / len(vs), 1)
+        velocity_trend.append(row)
 
     # 투구 탄착군 (raw 좌표 + 상대 타자/구속)
     batter_ids = {p.batter_id for p in pitches if p.batter_id is not None}
@@ -373,6 +393,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         "velocity_trend": velocity_trend,
         "locations":      locations,
         "count_breakdown": count_breakdown,
+        "movement":       movement,
     }
 
 

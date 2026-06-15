@@ -32,6 +32,20 @@ export interface PitchType {
 export interface VeloPoint {
   game_date: string
   avg_velocity: number
+  [pitchType: string]: number | string
+}
+
+export interface MovementPoint {
+  pitch_type: string
+  count: number
+  pct: number
+  avg_velocity: number
+  h_break: number
+  v_break: number
+}
+
+export interface MovementProfileProps {
+  data: MovementPoint[]
 }
 
 export interface Percentiles {
