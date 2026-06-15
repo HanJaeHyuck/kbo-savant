@@ -11,7 +11,7 @@ export default function PercentileBar({
   return (
     <div
       className="grid items-center gap-x-2 py-1"
-      style={{ gridTemplateColumns: 'clamp(70px,20%,100px) 1fr clamp(50px,15%,75px)' }}
+      style={{ gridTemplateColumns: 'clamp(80px,30%,112px) 1fr clamp(66px,20%,88px)' }}
       title={tooltip}
       data-testid="percentile-bar"
     >

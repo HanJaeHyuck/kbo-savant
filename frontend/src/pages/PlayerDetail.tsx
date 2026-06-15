@@ -232,7 +232,7 @@ export default function PlayerDetail() {
 
       <main className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-8 space-y-6">
         {/* 상단 3열: 커리어 테이블 | 퍼센타일 | 차트 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_320px_260px] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(300px,340px)_minmax(280px,320px)] gap-6 items-start">
 
           {/* 좌측: 연도별 커리어 테이블 */}
           <div className="space-y-3 min-w-0">
@@ -270,6 +270,10 @@ export default function PlayerDetail() {
                 </div>
               </div>
             )}
+            {/* 좌측 추가 차트 (높이 균형) */}
+            {isPitcher
+              ? <PitcherLeftExtras pitches={pitches} />
+              : <BatterLeftExtras batting={batting} />}
           </div>
 
           {/* 중앙: 퍼센타일 랭킹 */}
@@ -283,18 +287,13 @@ export default function PlayerDetail() {
               : <BatterPercentiles batting={batting} />}
           </div>
 
-          {/* 우측: 차트 */}
+          {/* 우측: 차트 (모든 차트를 우측에 쌓아 긴 퍼센타일 컬럼과 높이 균형) */}
           <div className="space-y-4 min-w-0">
             {isPitcher
               ? <PitcherSideCharts pitches={pitches} />
-              : <BatterSideCharts battedBalls={battedBalls} batting={batting} />}
+              : <BatterSideCharts battedBalls={battedBalls} />}
           </div>
         </div>
-
-        {/* 하단 전체너비: 존 분석 */}
-        {isPitcher
-          ? <PitcherZoneSection pitches={pitches} />
-          : <BatterZoneSection battedBalls={battedBalls} />}
       </main>
     </div>
   )
@@ -343,20 +342,8 @@ const RADAR_STATS = ['WAR', 'wRC+', '하드힛%', '배럴%', '평균EV', 'Chase%
 function BatterPercentiles({ batting }: { batting: BattingData | null }) {
   if (!batting) return <SkeletonBlock height="320px" />
   const pc = batting.percentiles
-  const radarPlayers = [{
-    name: '퍼센타일',
-    data: {
-      WAR: pc.war ?? 50,
-      'wRC+': pc.wrc_plus ?? 50,
-      '하드힛%': pc.hard_hit_pct ?? 50,
-      '배럴%': pc.barrel_pct ?? 50,
-      '평균EV': pc.avg_ev ?? 50,
-      'Chase%': pc.chase_pct ?? 50,
-    },
-  }]
   return (
-    <>
-      <div className="bg-white rounded-lg shadow p-4 space-y-1" data-testid="batter-percentile-section">
+    <div className="bg-white rounded-lg shadow p-4 space-y-1" data-testid="batter-percentile-section">
         <PercentileScale />
         <SubLabel>생산 지표</SubLabel>
         <PercentileBar label="WAR" value={batting.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
@@ -374,18 +361,53 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
         <SubLabel>선구안 (낮을수록 우수)</SubLabel>
         <PercentileBar label="Chase%" value={`${batting.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} />
         <PercentileBar label="Whiff%" value={`${batting.tracking.whiff_pct.toFixed(1)}%`} percentile={pc.whiff_pct ?? 50} tooltip={TOOLTIPS['Whiff%']} />
-      </div>
+    </div>
+  )
+}
+
+/* ── 좌측 추가: 타자 레이더 ──────────────────────── */
+function BatterLeftExtras({ batting }: { batting: BattingData | null }) {
+  if (!batting) return null
+  const pc = batting.percentiles
+  const radarPlayers = [{
+    name: '퍼센타일',
+    data: {
+      WAR: pc.war ?? 50, 'wRC+': pc.wrc_plus ?? 50, '하드힛%': pc.hard_hit_pct ?? 50,
+      '배럴%': pc.barrel_pct ?? 50, '평균EV': pc.avg_ev ?? 50, 'Chase%': pc.chase_pct ?? 50,
+    },
+  }]
+  return (
+    <div className="bg-white rounded-lg shadow p-4">
+      <SectionTitle>레이더 차트</SectionTitle>
+      <RadarChart players={radarPlayers} stats={RADAR_STATS} />
+    </div>
+  )
+}
+
+/* ── 좌측 추가: 투수 구속트렌드 + 볼카운트 ────────── */
+function PitcherLeftExtras({ pitches }: { pitches: PitchesData | null }) {
+  if (!pitches) return null
+  return (
+    <>
+      {pitches.velocity_trend.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <SectionTitle>구속 트렌드</SectionTitle>
+          <VeloTrend data={pitches.velocity_trend} />
+        </div>
+      )}
       <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>레이더 차트</SectionTitle>
-        <RadarChart players={radarPlayers} stats={RADAR_STATS} />
+        <SectionTitle>볼카운트별 구종</SectionTitle>
+        <PitchCountBreakdown data={pitches.count_breakdown} />
       </div>
     </>
   )
 }
 
-/* ── 투수 우측 차트 ─────────────────────────────── */
+/* ── 투수 우측 차트 (구종구성·구속트렌드·탄착군·존히트맵·볼카운트) ── */
 function PitcherSideCharts({ pitches }: { pitches: PitchesData | null }) {
-  if (!pitches) return <SkeletonBlock height="300px" />
+  const [zoneMetric, setZoneMetric] = useState<'batting_avg' | 'whiff_pct'>('batting_avg')
+  const [locColorBy, setLocColorBy] = useState<'pitch_type' | 'result'>('pitch_type')
+  if (!pitches) return <SkeletonBlock height="600px" />
   return (
     <>
       {pitches.pitch_mix.length > 0 && (
@@ -394,108 +416,66 @@ function PitcherSideCharts({ pitches }: { pitches: PitchesData | null }) {
           <PitchMix data={pitches.pitch_mix} season={2024} />
         </div>
       )}
-      {pitches.velocity_trend.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4">
-          <SectionTitle>구속 트렌드</SectionTitle>
-          <VeloTrend data={pitches.velocity_trend} />
-        </div>
-      )}
-    </>
-  )
-}
-
-/* ── 타자 우측 차트 ─────────────────────────────── */
-function BatterSideCharts({ battedBalls }: { battedBalls: BattedBallsData | null; batting: BattingData | null }) {
-  const [sprayColorBy, setSprayColorBy] = useState<'result' | 'exit_velocity'>('result')
-  return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <div className="flex items-center justify-between mb-2">
-        <SectionTitle>스프레이 차트</SectionTitle>
-        <select
-          className="text-xs border rounded px-1 py-0.5"
-          value={sprayColorBy}
-          onChange={e => setSprayColorBy(e.target.value as 'result' | 'exit_velocity')}
-          data-testid="spray-color-select"
-        >
-          <option value="result">결과별</option>
-          <option value="exit_velocity">타구속도</option>
-        </select>
-      </div>
-      <div className="flex justify-center" data-testid="spray-chart-container">
-        <SprayChart data={battedBalls?.spray_data ?? []} colorBy={sprayColorBy} />
-      </div>
-    </div>
-  )
-}
-
-/* ── 투수 하단: 탄착군 + 존히트맵 + 볼카운트 ────────── */
-function PitcherZoneSection({ pitches }: { pitches: PitchesData | null }) {
-  const [zoneMetric, setZoneMetric] = useState<'batting_avg' | 'whiff_pct'>('batting_avg')
-  const [locColorBy, setLocColorBy] = useState<'pitch_type' | 'result'>('pitch_type')
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* 투구 탄착군 */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center justify-between mb-2">
           <SectionTitle>투구 탄착군</SectionTitle>
-          <select
-            className="text-xs border rounded px-1 py-0.5"
-            value={locColorBy}
-            onChange={e => setLocColorBy(e.target.value as 'pitch_type' | 'result')}
-            data-testid="loc-color-select"
-          >
+          <select className="text-xs border rounded px-1 py-0.5" value={locColorBy}
+            onChange={e => setLocColorBy(e.target.value as 'pitch_type' | 'result')} data-testid="loc-color-select">
             <option value="pitch_type">구종별</option>
             <option value="result">결과별</option>
           </select>
         </div>
         <div className="flex justify-center" data-testid="pitch-zone-container">
-          {pitches ? <PitchZoneMap data={pitches.locations} colorBy={locColorBy} /> : <SkeletonBlock height="240px" />}
+          <PitchZoneMap data={pitches.locations} colorBy={locColorBy} />
         </div>
       </div>
-
-      {/* 존별 피안타율 히트맵 */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center justify-between mb-2">
           <SectionTitle>스트라이크존 히트맵</SectionTitle>
-          <select
-            className="text-xs border rounded px-1 py-0.5"
-            value={zoneMetric}
-            onChange={e => setZoneMetric(e.target.value as 'batting_avg' | 'whiff_pct')}
-            data-testid="zone-metric-select"
-          >
+          <select className="text-xs border rounded px-1 py-0.5" value={zoneMetric}
+            onChange={e => setZoneMetric(e.target.value as 'batting_avg' | 'whiff_pct')} data-testid="zone-metric-select">
             <option value="batting_avg">피안타율</option>
             <option value="whiff_pct">Whiff%</option>
           </select>
         </div>
         <div className="flex justify-center" data-testid="zone-map-container">
-          {pitches ? <StrikeZoneMap data={pitches.zone_data} colorBy={zoneMetric} /> : <SkeletonBlock height="240px" />}
+          <StrikeZoneMap data={pitches.zone_data} colorBy={zoneMetric} />
         </div>
       </div>
-
-      {/* 볼카운트별 구종 */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>볼카운트별 구종</SectionTitle>
-        {pitches ? <PitchCountBreakdown data={pitches.count_breakdown} /> : <SkeletonBlock height="240px" />}
-      </div>
-    </div>
+    </>
   )
 }
 
-/* ── 타자 하단: 존별 히트맵 ─────────────────────── */
-function BatterZoneSection({ battedBalls }: { battedBalls: BattedBallsData | null }) {
+/* ── 타자 우측 차트 (스프레이 + 존별 히트맵) ────────── */
+function BatterSideCharts({ battedBalls }: { battedBalls: BattedBallsData | null }) {
+  const [sprayColorBy, setSprayColorBy] = useState<'result' | 'exit_velocity'>('result')
   const zoneData: ZoneData[] = battedBalls?.zone_avg?.map(z => ({
     zone: z.zone, pitches: z.attempts, batting_avg: z.avg, whiff_pct: 0,
   })) ?? []
-  if (zoneData.length === 0) return null
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <>
       <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>존별 타율 히트맵</SectionTitle>
-        <div className="flex justify-center" data-testid="batter-zone-map-container">
-          <StrikeZoneMap data={zoneData} colorBy="batting_avg" />
+        <div className="flex items-center justify-between mb-2">
+          <SectionTitle>스프레이 차트</SectionTitle>
+          <select className="text-xs border rounded px-1 py-0.5" value={sprayColorBy}
+            onChange={e => setSprayColorBy(e.target.value as 'result' | 'exit_velocity')} data-testid="spray-color-select">
+            <option value="result">결과별</option>
+            <option value="exit_velocity">타구속도</option>
+          </select>
+        </div>
+        <div className="flex justify-center" data-testid="spray-chart-container">
+          <SprayChart data={battedBalls?.spray_data ?? []} colorBy={sprayColorBy} />
         </div>
       </div>
-    </div>
+      {zoneData.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <SectionTitle>존별 타율 히트맵</SectionTitle>
+          <div className="flex justify-center" data-testid="batter-zone-map-container">
+            <StrikeZoneMap data={zoneData} colorBy="batting_avg" />
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

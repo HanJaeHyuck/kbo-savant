@@ -159,36 +159,35 @@ for (name, skill) in [(p[0], p[5]) for p in pitchers]:
 db.commit()
 print(f"투수 스탯 {pcount}건 등록 완료")
 
-# ── 투구 데이터 (2024, 전 투수 × 다경기) ─────────────
-SEASON = 2024
+# ── 투구 데이터 (3시즌, 전 투수 × 다경기) ─────────────
 PITCH_TYPES = ["직구", "슬라이더", "체인지업", "커브"]
 PITCH_WEIGHTS = [0.45, 0.27, 0.16, 0.12]
 VELO = {"직구": (145, 152), "슬라이더": (128, 136), "체인지업": (124, 131), "커브": (114, 123)}
 ZONES = list(range(1, 10)) + [11, 12, 13, 14]
 RESULTS = ["스트라이크", "볼", "헛스윙", "파울", "인플레이", "루킹스트라이크"]
 RESULT_W = [0.20, 0.22, 0.12, 0.18, 0.18, 0.10]
-GAME_DATES = [date(2024, 4, 1) + timedelta(days=12 * g) for g in range(18)]  # 18경기
 
 batter_ids = [pid[b[0]] for b in batters]
 pitch_rows = []
-for (pname, *_p, pskill) in [(p[0], p[5]) for p in pitchers]:
-    ppid = pid[pname]
-    velo_boost = (pskill - 0.5) * 4  # 잘하는 투수일수록 구속 ↑
-    for g, gdate in enumerate(GAME_DATES):
-        n_pitches = random.randint(12, 20)
-        for i in range(n_pitches):
-            pt = random.choices(PITCH_TYPES, PITCH_WEIGHTS)[0]
-            vlo, vhi = VELO[pt]
-            pitch_rows.append(Pitch(
-                game_id=f"2024G{g:02d}_{ppid}", pitcher_id=ppid, batter_id=random.choice(batter_ids),
-                season=SEASON, game_date=gdate, inning=random.randint(1, 9), pitch_number=i + 1,
-                pitch_type=pt, velocity=round(random.uniform(vlo, vhi) + velo_boost + jitter(0, 0.6), 1),
-                zone=random.choice(ZONES),
-                plate_x=round(random.uniform(-0.55, 0.55), 2),
-                plate_z=round(random.uniform(0.05, 1.15), 2),
-                balls=random.randint(0, 3), strikes=random.randint(0, 2),
-                result=random.choices(RESULTS, RESULT_W)[0],
-            ))
+for season in SEASONS:
+    game_dates = [date(season, 4, 1) + timedelta(days=14 * g) for g in range(14)]  # 14경기/시즌
+    for (pname, pskill) in [(p[0], p[5]) for p in pitchers]:
+        ppid = pid[pname]
+        velo_boost = (pskill - 0.5) * 4  # 잘하는 투수일수록 구속 ↑
+        for g, gdate in enumerate(game_dates):
+            for i in range(random.randint(11, 17)):
+                pt = random.choices(PITCH_TYPES, PITCH_WEIGHTS)[0]
+                vlo, vhi = VELO[pt]
+                pitch_rows.append(Pitch(
+                    game_id=f"{season}G{g:02d}_{ppid}", pitcher_id=ppid, batter_id=random.choice(batter_ids),
+                    season=season, game_date=gdate, inning=random.randint(1, 9), pitch_number=i + 1,
+                    pitch_type=pt, velocity=round(random.uniform(vlo, vhi) + velo_boost + jitter(0, 0.6), 1),
+                    zone=random.choice(ZONES),
+                    plate_x=round(random.uniform(-0.55, 0.55), 2),
+                    plate_z=round(random.uniform(0.05, 1.15), 2),
+                    balls=random.randint(0, 3), strikes=random.randint(0, 2),
+                    result=random.choices(RESULTS, RESULT_W)[0],
+                ))
 db.bulk_save_objects(pitch_rows)
 db.commit()
 print(f"투구 {len(pitch_rows)}개 등록 완료")
@@ -215,24 +214,24 @@ def batted_result(ev, la):
 
 
 ball_rows = []
-for (bname, *_b, bskill) in [(b[0], b[6]) for b in batters]:
-    bpid = pid[bname]
-    ev_center = 134 + bskill * 16  # 스타일수록 강한 타구
-    n_balls = random.randint(150, 210)
-    for i in range(n_balls):
-        opp = random.choice(pitcher_ids)
-        ev = round(min(178, max(110, random.gauss(ev_center - pitcher_supp[opp] * 0.4, 11))), 1)
-        la = round(random.gauss(14, 16), 1)
-        result = batted_result(ev, la)
-        ang = random.uniform(-48, 48)
-        dist = random.uniform(30, 150)
-        ball_rows.append(BattedBall(
-            game_id=f"2024B{i:04d}_{bpid}", batter_id=bpid, pitcher_id=opp,
-            season=SEASON, game_date=date(2024, 4, 1) + timedelta(days=i % 180),
-            exit_velocity=ev, launch_angle=la, direction=random.choice(DIRECTIONS), result=result,
-            spray_x=round(dist * math.sin(math.radians(ang)), 1),
-            spray_y=round(dist * math.cos(math.radians(ang)), 1),
-        ))
+for season in SEASONS:
+    for (bname, bskill) in [(b[0], b[6]) for b in batters]:
+        bpid = pid[bname]
+        ev_center = 134 + bskill * 16  # 스타일수록 강한 타구
+        for i in range(random.randint(130, 180)):
+            opp = random.choice(pitcher_ids)
+            ev = round(min(178, max(110, random.gauss(ev_center - pitcher_supp[opp] * 0.4, 11))), 1)
+            la = round(random.gauss(14, 16), 1)
+            result = batted_result(ev, la)
+            ang = random.uniform(-48, 48)
+            dist = random.uniform(30, 150)
+            ball_rows.append(BattedBall(
+                game_id=f"{season}B{i:04d}_{bpid}", batter_id=bpid, pitcher_id=opp,
+                season=season, game_date=date(season, 4, 1) + timedelta(days=i % 180),
+                exit_velocity=ev, launch_angle=la, direction=random.choice(DIRECTIONS), result=result,
+                spray_x=round(dist * math.sin(math.radians(ang)), 1),
+                spray_y=round(dist * math.cos(math.radians(ang)), 1),
+            ))
 db.bulk_save_objects(ball_rows)
 db.commit()
 print(f"타구 {len(ball_rows)}개 등록 완료")
