@@ -31,11 +31,12 @@ const ZONE_LAYOUT = [
   [4, 5, 6],
   [7, 8, 9],
 ]
+// 9칸 그리드는 x,y 30~210 차지. 외곽 라벨은 0~30 / 210~240 여백에 배치.
 const OUTER_ZONES = [
-  { zone: 11, label: '상', x: 80, y: 5,  w: 60, h: 20 },
-  { zone: 12, label: '우', x: 185, y: 35, w: 20, h: 60 },
-  { zone: 13, label: '하', x: 80, y: 160, w: 60, h: 20 },
-  { zone: 14, label: '좌', x: 5, y: 35, w: 20, h: 60 },
+  { zone: 11, label: '상', x: 90, y: 6,   w: 60, h: 18 },
+  { zone: 12, label: '우', x: 216, y: 90, w: 18, h: 60 },
+  { zone: 13, label: '하', x: 90, y: 216, w: 60, h: 18 },
+  { zone: 14, label: '좌', x: 6, y: 90,  w: 18, h: 60 },
 ]
 
 const CELL = 60

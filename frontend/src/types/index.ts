@@ -105,6 +105,8 @@ export interface PitchLocation {
   plate_z: number
   pitch_type: string
   result: string
+  velocity?: number
+  batter?: string
 }
 
 export interface PitchCountRow {

@@ -174,6 +174,10 @@ for season in SEASONS:
     for (pname, pskill) in [(p[0], p[5]) for p in pitchers]:
         ppid = pid[pname]
         velo_boost = (pskill - 0.5) * 4  # 잘하는 투수일수록 구속 ↑
+        sk = pskill
+        # 실력 연동 결과 가중치: 잘할수록 헛스윙/스트라이크↑, 볼/인플레이↓
+        res_w = [0.18 + sk * 0.05, 0.27 - sk * 0.11, 0.05 + sk * 0.15,
+                 0.18, 0.24 - sk * 0.11, 0.05 + sk * 0.10]
         for g, gdate in enumerate(game_dates):
             for i in range(random.randint(11, 17)):
                 pt = random.choices(PITCH_TYPES, PITCH_WEIGHTS)[0]
@@ -186,7 +190,7 @@ for season in SEASONS:
                     plate_x=round(random.uniform(-0.55, 0.55), 2),
                     plate_z=round(random.uniform(0.05, 1.15), 2),
                     balls=random.randint(0, 3), strikes=random.randint(0, 2),
-                    result=random.choices(RESULTS, RESULT_W)[0],
+                    result=random.choices(RESULTS, res_w)[0],
                 ))
 db.bulk_save_objects(pitch_rows)
 db.commit()

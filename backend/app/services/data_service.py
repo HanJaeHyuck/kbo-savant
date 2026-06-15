@@ -318,13 +318,20 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         key=lambda x: x["game_date"],
     )
 
-    # 투구 탄착군 (raw 좌표)
+    # 투구 탄착군 (raw 좌표 + 상대 타자/구속)
+    batter_ids = {p.batter_id for p in pitches if p.batter_id is not None}
+    name_map: dict = {}
+    if batter_ids:
+        for row in db.query(Player.id, Player.name).filter(Player.id.in_(batter_ids)).all():
+            name_map[row.id] = row.name
     locations = [
         {
             "plate_x":    p.plate_x,
             "plate_z":    p.plate_z,
             "pitch_type": p.pitch_type or "기타",
             "result":     p.result,
+            "velocity":   p.velocity,
+            "batter":     name_map.get(p.batter_id, "—"),
         }
         for p in pitches
         if p.plate_x is not None and p.plate_z is not None

@@ -11,7 +11,7 @@ export default function PercentileBar({
   return (
     <div
       className="grid items-center gap-x-2 py-1"
-      style={{ gridTemplateColumns: 'clamp(80px,30%,112px) 1fr clamp(66px,20%,88px)' }}
+      style={{ gridTemplateColumns: 'clamp(78px,26%,108px) 1fr 24px clamp(44px,16%,62px)' }}
       title={tooltip}
       data-testid="percentile-bar"
     >
@@ -26,16 +26,19 @@ export default function PercentileBar({
         />
       </div>
 
-      <div className="flex items-center gap-1 justify-end">
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-          style={{ backgroundColor: color }}
-          aria-label={`퍼센타일 ${displayPercentile}`}
-        >
-          {displayPercentile}
-        </div>
-        <span className="text-xs font-mono text-[var(--color-text-primary)]">{value}</span>
+      {/* 퍼센타일 원 — 고정 칸이라 자릿수와 무관하게 위치 일정 */}
+      <div
+        className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+        style={{ backgroundColor: color }}
+        aria-label={`퍼센타일 ${displayPercentile}`}
+      >
+        {displayPercentile}
       </div>
+
+      {/* 실제 수치 — 고정 칸 우측 정렬 */}
+      <span className="text-xs font-mono text-right text-[var(--color-text-primary)]" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </span>
     </div>
   )
 }
