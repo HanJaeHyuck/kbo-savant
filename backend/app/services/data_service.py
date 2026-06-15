@@ -163,6 +163,7 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
             "csw_pct":        stat.csw_pct,
             "whiff_pct":      stat.whiff_pct,
             "chase_pct":      stat.chase_pct,
+            "arm_angle":      stat.arm_angle,
         }
 
     all_pcts = _cached_pitching_percentiles(season, db)
@@ -342,9 +343,11 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
     # 투구 탄착군 (raw 좌표 + 상대 타자/구속)
     batter_ids = {p.batter_id for p in pitches if p.batter_id is not None}
     name_map: dict = {}
+    bats_map: dict = {}
     if batter_ids:
-        for row in db.query(Player.id, Player.name).filter(Player.id.in_(batter_ids)).all():
+        for row in db.query(Player.id, Player.name, Player.bats).filter(Player.id.in_(batter_ids)).all():
             name_map[row.id] = row.name
+            bats_map[row.id] = row.bats
     locations = [
         {
             "plate_x":    p.plate_x,
@@ -384,6 +387,27 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         for key, d in sorted(count_map.items())
     ]
 
+    # 좌/우 타자별 구종 사용률
+    hand_type: dict = {"L": {}, "R": {}}
+    hand_total: dict = {"L": 0, "R": 0}
+    for p in pitches:
+        hand = bats_map.get(p.batter_id)
+        if hand not in ("L", "R"):
+            continue
+        pt = p.pitch_type or "기타"
+        hand_type[hand][pt] = hand_type[hand].get(pt, 0) + 1
+        hand_total[hand] += 1
+    usage_splits = {
+        side: sorted(
+            [
+                {"pitch_type": pt, "pct": round(n / hand_total[side] * 100, 1)}
+                for pt, n in hand_type[side].items()
+            ],
+            key=lambda x: -x["pct"],
+        )
+        for side in ("L", "R")
+    }
+
     return {
         "player_id":      player_id,
         "season":         season,
@@ -394,6 +418,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         "locations":      locations,
         "count_breakdown": count_breakdown,
         "movement":       movement,
+        "usage_splits":   usage_splits,
     }
 
 

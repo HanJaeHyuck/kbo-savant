@@ -72,18 +72,33 @@ for _ in range(15):
                      round(random.uniform(0.30, 0.85), 2)))
 
 # ── Player insert ───────────────────────────────────
+SCHOOLS = ["휘문고", "덕수고", "광주일고", "부산고", "북일고", "야탑고", "충암고", "장충고", "경기고", "성남고"]
+
+
+def bio():
+    h = random.randint(176, 190)
+    w = random.randint(78, 98)
+    rd = random.randint(1, 10)
+    no = random.randint(1, 100)
+    by = random.randint(2010, 2021)
+    return {"height": f"{h}cm", "weight": f"{w}kg",
+            "draft": f"{by} 신인드래프트 {rd}R {no}순위", "school": random.choice(SCHOOLS)}
+
+
 kbo = 10000
 player_objs = []
 batter_skill = {}
 pitcher_skill = {}
+arm_angle = {}
 for (name, en, team, pos, bats, birth, skill) in batters:
     kbo += 1
-    p = Player(kbo_id=str(kbo), name=name, name_en=en, team=team, position=pos, bats=bats, throws=random.choice(["L", "R"]), birth_date=birth)
+    p = Player(kbo_id=str(kbo), name=name, name_en=en, team=team, position=pos, bats=bats, throws=random.choice(["L", "R"]), birth_date=birth, **bio())
     db.add(p); player_objs.append(p); batter_skill[name] = skill
 for (name, en, team, throws, birth, skill) in pitchers:
     kbo += 1
-    p = Player(kbo_id=str(kbo), name=name, name_en=en, team=team, position="P", bats="R", throws=throws, birth_date=birth)
+    p = Player(kbo_id=str(kbo), name=name, name_en=en, team=team, position="P", bats="R", throws=throws, birth_date=birth, **bio())
     db.add(p); player_objs.append(p); pitcher_skill[name] = skill
+    arm_angle[name] = round(random.uniform(15, 80), 1)  # 사이드암~오버핸드
 db.commit()
 for p in player_objs:
     db.refresh(p)
@@ -148,6 +163,7 @@ for (name, skill) in [(p[0], p[5]) for p in pitchers]:
             hard_hit_pct=round(jitter(38 - s * 14, 2), 1), barrel_pct=round(jitter(8 - s * 5, 1), 1),
             csw_pct=round(jitter(25 + s * 11, 1.5), 1), whiff_pct=round(jitter(21 + s * 13, 1.5), 1),
             chase_pct=round(jitter(27 + s * 11, 1.5), 1),
+            arm_angle=arm_angle[name],
         ))
         pcount += 1
 db.commit()

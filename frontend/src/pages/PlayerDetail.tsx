@@ -27,13 +27,17 @@ interface PlayerInfo {
   throws: string
   bats: string
   birth_date?: string
+  height?: string
+  weight?: string
+  draft?: string
+  school?: string
 }
 
 interface PitchingData {
   season: number
   classic: { games: number; gs: number; ip: number; wins: number; losses: number; era: number }
   sabermetrics: { fip: number; xfip: number; era_minus: number; fip_minus: number; k_pct: number; bb_pct: number; babip: number; war: number }
-  tracking: { avg_ev_allowed: number; hard_hit_pct: number; barrel_pct: number; csw_pct: number; whiff_pct: number; chase_pct: number; xera?: number | null }
+  tracking: { avg_ev_allowed: number; hard_hit_pct: number; barrel_pct: number; csw_pct: number; whiff_pct: number; chase_pct: number; xera?: number | null; arm_angle?: number | null }
   run_value: { pitching_rv: number; fastball_rv: number; breaking_rv: number; offspeed_rv: number }
   percentiles: Record<string, number>
 }
@@ -46,6 +50,7 @@ interface PitchesData {
   locations: PitchLocation[]
   count_breakdown: PitchCountRow[]
   movement: MovementPoint[]
+  usage_splits: { L: { pitch_type: string; pct: number }[]; R: { pitch_type: string; pct: number }[] }
 }
 
 interface BattingData {
@@ -235,15 +240,13 @@ export default function PlayerDetail() {
 
       <main className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-8 space-y-6">
         {/* 히어로 3열: 사진+정보 | 퍼센타일 | 차트 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(320px,360px)_1fr] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[270px_minmax(320px,360px)_1fr] gap-6 items-start">
 
-          {/* 좌측: 선수 사진 + 트래킹 지표 */}
+          {/* 좌측: 선수 사진 + 바이오 + 구종 사용률 + 트래킹 */}
           <div className="space-y-3 min-w-0">
             <PlayerPhoto name={playerInfo.name} position={playerInfo.position} />
-            <div className="bg-white rounded-lg shadow p-3 text-center">
-              <p className="text-xs text-[var(--color-text-secondary)]">{playerInfo.team}</p>
-              <p className="text-[11px] text-[var(--color-text-muted)]">{playerInfo.bats}타 {playerInfo.throws}투 · {playerInfo.birth_date ?? ''}</p>
-            </div>
+            <BioCard info={playerInfo} career={career} isPitcher={isPitcher} />
+            {isPitcher && <PitcherSplits pitching={pitching} pitches={pitches} />}
             {isPitcher && pitching && (
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{selectedYear} 트래킹 지표</p>
@@ -254,6 +257,12 @@ export default function PlayerDetail() {
                   <StatRow label="허용 HH%" value={`${pitching.tracking.hard_hit_pct.toFixed(1)}%`} />
                   <StatRow label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} />
                 </div>
+              </div>
+            )}
+            {isPitcher && pitches && (
+              <div className="bg-white rounded-lg shadow p-4">
+                <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">볼카운트별 구종</p>
+                <PitchCountBreakdown data={pitches.count_breakdown} />
               </div>
             )}
             {!isPitcher && batting && (
@@ -392,9 +401,97 @@ function PlayerPhoto({ name, position }: { name: string; position: string }) {
   )
 }
 
+const PT_COLOR: Record<string, string> = {
+  직구: '#1E3A8A', 포심: '#1E3A8A', 슬라이더: '#0F6E56', 체인지업: '#BA7517',
+  커브: '#7C3AED', 커터: '#0EA5E9', 싱커: '#65A30D', 스플리터: '#DB2777', 기타: '#9CA3AF',
+}
+const nf = (v: number | null | undefined, d: number) => (v == null ? '-' : v.toFixed(d))
+
+/* ── 좌측 바이오 카드 ─────────────────────────────── */
+function BioCard({ info, career, isPitcher }: { info: PlayerInfo; career: CareerRow[]; isPitcher: boolean }) {
+  const age = info.birth_date ? 2026 - Number(info.birth_date.slice(0, 4)) : null
+  const rows = [...career].sort((a, b) => b.season - a.season).slice(0, 3)
+  return (
+    <div className="bg-white rounded-lg shadow p-3 text-xs space-y-2">
+      <p className="text-center text-[var(--color-text-secondary)] font-semibold">{info.position} | {info.team}</p>
+      <div className="space-y-0.5 text-[var(--color-text-secondary)] leading-relaxed">
+        <p>{info.throws ?? '-'}투 {info.bats ?? '-'}타{info.height ? ` · ${info.height}` : ''}{info.weight ? ` ${info.weight}` : ''}{age ? ` · 만 ${age}세` : ''}</p>
+        {info.draft && <p>{info.draft}</p>}
+        {info.school && <p>출신: {info.school}</p>}
+      </div>
+      {rows.length > 0 && (
+        <table className="w-full font-mono text-[10px] border-t pt-1">
+          <thead>
+            <tr className="text-[var(--color-text-muted)]">
+              <th className="text-left font-normal">시즌</th>
+              {isPitcher
+                ? <><th className="font-normal">W-L</th><th className="font-normal">ERA</th><th className="font-normal">IP</th><th className="font-normal">K%</th></>
+                : <><th className="font-normal">AVG</th><th className="font-normal">HR</th><th className="font-normal">OPS</th><th className="font-normal">WAR</th></>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.season} className="text-[var(--color-text-primary)]">
+                <td className="text-left">{r.season}</td>
+                {isPitcher
+                  ? <><td className="text-center">{r.wins ?? '-'}-{r.losses ?? '-'}</td><td className="text-center">{nf(r.era, 2)}</td><td className="text-center">{nf(r.ip, 1)}</td><td className="text-center">{nf(r.k_pct, 1)}</td></>
+                  : <><td className="text-center">{nf(r.avg, 3).replace(/^0/, '')}</td><td className="text-center">{r.hr ?? '-'}</td><td className="text-center">{nf(r.ops, 3).replace(/^0/, '')}</td><td className="text-center">{nf(r.war, 1)}</td></>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+/* ── 구종 사용률 한 줄(스택 바) ────────────────── */
+function UsageRow({ label, rows }: { label: string; rows?: { pitch_type: string; pct: number }[] }) {
+  return (
+    <div className="mb-1.5">
+      <div className="flex justify-between text-[10px] text-[var(--color-text-muted)]"><span>{label}</span></div>
+      <div className="flex h-3 rounded overflow-hidden bg-[#F1F5F9]">
+        {(rows ?? []).map(r => (
+          <div key={r.pitch_type} style={{ width: `${r.pct}%`, background: PT_COLOR[r.pitch_type] ?? '#9CA3AF' }} title={`${r.pitch_type} ${r.pct}%`} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ── 좌측: Arm Angle + 구종 사용률(vs 좌/우) ────────── */
+function PitcherSplits({ pitching, pitches }: { pitching: PitchingData | null; pitches: PitchesData | null }) {
+  const arm = pitching?.tracking.arm_angle
+  const splits = pitches?.usage_splits
+  return (
+    <div className="bg-white rounded-lg shadow p-3 text-xs space-y-2">
+      {arm != null && (
+        <div className="flex justify-between items-center">
+          <span className="text-[var(--color-text-secondary)]">Arm Angle</span>
+          <span className="font-mono font-bold text-[var(--color-text-primary)]">{arm.toFixed(0)}°</span>
+        </div>
+      )}
+      {splits && (
+        <div>
+          <p className="text-[var(--color-text-secondary)] font-semibold mb-1">구종 사용률</p>
+          <UsageRow label="vs 우타" rows={splits.R} />
+          <UsageRow label="vs 좌타" rows={splits.L} />
+          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+            {(splits.R.length ? splits.R : splits.L).map(r => (
+              <span key={r.pitch_type} className="flex items-center gap-1 text-[9px] text-[var(--color-text-secondary)]">
+                <span className="inline-block w-2 h-2 rounded-full" style={{ background: PT_COLOR[r.pitch_type] ?? '#9CA3AF' }} />{r.pitch_type}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ── 투수 히어로 차트 (Movement Profile + 구종 구성) ── */
 function PitcherHeroCharts({ pitches }: { pitches: PitchesData | null }) {
-  if (!pitches) return <SkeletonBlock height="420px" />
+  if (!pitches) return <SkeletonBlock height="600px" />
   return (
     <>
       <div className="bg-white rounded-lg shadow p-4">
@@ -407,6 +504,10 @@ function PitcherHeroCharts({ pitches }: { pitches: PitchesData | null }) {
           <PitchMix data={pitches.pitch_mix} season={2024} />
         </div>
       )}
+      <div className="bg-white rounded-lg shadow p-4">
+        <SectionTitle>구속 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별</span></SectionTitle>
+        <VeloTrend data={pitches.velocity_trend} />
+      </div>
     </>
   )
 }
@@ -450,29 +551,13 @@ function BatterHeroCharts({ battedBalls, batting }: { battedBalls: BattedBallsDa
 /* ── 투수 하단 차트 그리드 (구속/탄착군/존/볼카운트) ── */
 function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
   const [zoneMetric, setZoneMetric] = useState<'batting_avg' | 'whiff_pct'>('batting_avg')
-  const [locColorBy, setLocColorBy] = useState<'pitch_type' | 'result'>('pitch_type')
   if (!pitches) return <SkeletonBlock height="300px" />
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>구속 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별</span></SectionTitle>
-        <VeloTrend data={pitches.velocity_trend} />
-      </div>
-      <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>볼카운트별 구종</SectionTitle>
-        <PitchCountBreakdown data={pitches.count_breakdown} />
-      </div>
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex items-center justify-between mb-2">
-          <SectionTitle>투구 탄착군</SectionTitle>
-          <select className="text-xs border rounded px-1 py-0.5" value={locColorBy}
-            onChange={e => setLocColorBy(e.target.value as 'pitch_type' | 'result')} data-testid="loc-color-select">
-            <option value="pitch_type">구종별</option>
-            <option value="result">결과별</option>
-          </select>
-        </div>
+        <SectionTitle>투구 탄착군 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 밀도</span></SectionTitle>
         <div className="flex justify-center" data-testid="pitch-zone-container">
-          <PitchZoneMap data={pitches.locations} colorBy={locColorBy} />
+          <PitchZoneMap data={pitches.locations} />
         </div>
       </div>
       <div className="bg-white rounded-lg shadow p-4">

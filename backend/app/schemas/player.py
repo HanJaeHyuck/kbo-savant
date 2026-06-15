@@ -22,5 +22,9 @@ class PlayerDetail(BaseModel):
     birth_date: Optional[date] = None
     throws: Optional[str] = None
     bats: Optional[str] = None
+    height: Optional[str] = None
+    weight: Optional[str] = None
+    draft: Optional[str] = None
+    school: Optional[str] = None
 
     model_config = {"from_attributes": True}

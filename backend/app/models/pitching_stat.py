@@ -31,5 +31,6 @@ class PitchingStat(Base):
     csw_pct = Column(Float)
     whiff_pct = Column(Float)
     chase_pct = Column(Float)
+    arm_angle = Column(Float)   # 릴리스 암 앵글 (도, 0=사이드암 ~ 90=오버핸드)
 
     __table_args__ = (UniqueConstraint("player_id", "season"),)

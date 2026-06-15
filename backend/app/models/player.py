@@ -14,5 +14,9 @@ class Player(Base):
     birth_date = Column(Date)
     throws = Column(String(5))
     bats = Column(String(5))
+    height = Column(String(10))   # 신장 (예: "185cm")
+    weight = Column(String(10))   # 체중 (예: "88kg")
+    draft = Column(String(60))    # 드래프트 정보
+    school = Column(String(60))   # 출신교
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
