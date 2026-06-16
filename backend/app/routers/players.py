@@ -15,6 +15,7 @@ from app.services.data_service import (
     get_batted_balls_response,
 )
 from app.services.pitch_arsenal_service import get_pitch_arsenal
+from app.services.similarity_service import get_similar_players
 
 router = APIRouter(prefix="/api/players", tags=["players"])
 
@@ -96,6 +97,17 @@ async def get_arsenal(player_id: int, db: Session = Depends(get_db)):
             "error_code": "PLAYER_NOT_FOUND"
         })
     return get_pitch_arsenal(player_id, db)
+
+
+@router.get("/{player_id}/similar")
+async def get_similar(player_id: int, season: int = Query(...), db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail={
+            "detail": "선수를 찾을 수 없습니다.",
+            "error_code": "PLAYER_NOT_FOUND"
+        })
+    return get_similar_players(player_id, season, db)
 
 
 @router.get("/{player_id}/career/batting")

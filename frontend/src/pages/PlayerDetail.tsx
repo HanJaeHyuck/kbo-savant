@@ -15,6 +15,7 @@ import MovementProfile from '../components/charts/MovementProfile'
 import ZoneHeatmapGrid from '../components/charts/ZoneHeatmapGrid'
 import CareerSplitsTable from '../components/tables/CareerSplitsTable'
 import PitchArsenalTable from '../components/tables/PitchArsenalTable'
+import SimilarPlayers from '../components/ui/SimilarPlayers'
 import {
   getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls,
   getCareerBatting, getCareerPitching, getPitchArsenal,
@@ -262,7 +263,19 @@ export default function PlayerDetail() {
           {/* 좌측: 선수 사진 + 바이오 + 커리어표 + 구종 사용률 + 트래킹 */}
           <div className="space-y-3 min-w-0">
             <PlayerHeroCard info={playerInfo} career={career} isPitcher={isPitcher} />
-            {isPitcher && <PitchUsageTable pitches={pitches} season={selectedYear} onNav={navigate} />}
+            {isPitcher && <PitchUsageTable pitches={pitches} season={selectedYear} onNav={navigate} playerId={playerId} playerName={playerInfo.name} />}
+            {!isPitcher && (
+              <div className="bg-white rounded-lg shadow p-3" data-testid="batter-player-apps">
+                <p className="text-[10px] font-semibold text-[var(--color-text-muted)] mb-1.5">Player Apps</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button onClick={() => navigate('/compare')}
+                    className="text-[10px] px-2 py-1 rounded bg-[#EDF1F7] hover:bg-[#DDE5F0] text-[var(--color-primary-mid)] font-medium">
+                    선수 비교
+                  </button>
+                  <SimilarPlayers playerId={playerId} playerName={playerInfo.name} season={selectedYear} />
+                </div>
+              </div>
+            )}
             {isPitcher && pitching && (
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{selectedYear} 트래킹 지표</p>
@@ -526,7 +539,7 @@ function UsageBar({ pct, side }: { pct: number; side: 'L' | 'R' }) {
   )
 }
 
-function PitchUsageTable({ pitches, season, onNav }: { pitches: PitchesData | null; season: number; onNav: (to: string) => void }) {
+function PitchUsageTable({ pitches, season, onNav, playerId, playerName }: { pitches: PitchesData | null; season: number; onNav: (to: string) => void; playerId: number; playerName: string }) {
   if (!pitches) return null
   const mix = [...(pitches.pitch_mix ?? [])].sort((a, b) => b.pct - a.pct)
   const lMap = new Map((pitches.usage_splits?.L ?? []).map(r => [r.pitch_type, r.pct]))
@@ -566,7 +579,7 @@ function PitchUsageTable({ pitches, season, onNav }: { pitches: PitchesData | nu
             className="text-[10px] px-2 py-1 rounded bg-[#EDF1F7] hover:bg-[#DDE5F0] text-[var(--color-primary-mid)] font-medium">
             구종 트래킹 ↓
           </button>
-          <span className="text-[10px] px-2 py-1 rounded bg-[#F4F6FA] text-[var(--color-text-muted)]">유사 선수 (준비중)</span>
+          <SimilarPlayers playerId={playerId} playerName={playerName} season={season} />
         </div>
       </div>
     </div>

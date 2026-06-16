@@ -36,6 +36,11 @@ export const getPitchArsenal = async (id: number) => {
   return data
 }
 
+export const getSimilarPlayers = async (id: number, season: number) => {
+  const { data } = await apiClient.get(`/api/players/${id}/similar`, { params: { season } })
+  return data
+}
+
 export const getCareerBatting = async (id: number) => {
   const { data } = await apiClient.get(`/api/players/${id}/career/batting`)
   return data
