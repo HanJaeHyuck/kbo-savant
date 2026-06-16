@@ -17,19 +17,18 @@ const NX = 20, NZ = 22, SIGMA = 1.8
 const sx = (x: number) => PAD + ((x - XR[0]) / (XR[1] - XR[0])) * CHART_W
 const sy = (z: number) => PAD + ((ZR[1] - z) / (ZR[1] - ZR[0])) * CHART_H
 
+// 파랑(적음) → 흰색(중간) → 빨강(많음) 발산형 — 한랭/고온 직관
 function heatColor(t: number): string {
-  if (t < 0.06) return 'rgba(0,0,0,0)'
-  const a = Math.min(1, 0.25 + t * 0.9)
-  if (t < 0.35) {
-    const s = t / 0.35
-    return `rgba(${Math.round(40 + s * 55)},${Math.round(100 + s * 95)},${Math.round(200 + s * 35)},${a.toFixed(2)})`
+  if (t < 0.04) return 'rgba(0,0,0,0)'
+  const a = Math.min(0.95, 0.55 + t * 0.45)
+  if (t < 0.5) {
+    const s = t / 0.5
+    // #2E6FD6 → #F4F6F3
+    return `rgba(${Math.round(46 + s * 198)},${Math.round(111 + s * 135)},${Math.round(214 - s * 71)},${a.toFixed(2)})`
   }
-  if (t < 0.65) {
-    const s = (t - 0.35) / 0.3
-    return `rgba(${Math.round(95 + s * 160)},${Math.round(195 - s * 130)},${Math.round(235 - s * 205)},${a.toFixed(2)})`
-  }
-  const s = (t - 0.65) / 0.35
-  return `rgba(255,${Math.round(65 - s * 55)},${Math.round(30 - s * 25)},${Math.min(1, a + 0.05).toFixed(2)})`
+  const s = (t - 0.5) / 0.5
+  // #F4F6F3 → #C0392B
+  return `rgba(${Math.round(244 - s * 52)},${Math.round(246 - s * 189)},${Math.round(243 - s * 200)},${a.toFixed(2)})`
 }
 
 function buildGrid(locs: PitchLocation[]): number[][] {
@@ -98,12 +97,8 @@ const MiniCard = React.memo(function MiniCard({
           x={sx(ZONE.xMin)} y={sy(ZONE.zMax)}
           width={sx(ZONE.xMax) - sx(ZONE.xMin)}
           height={sy(ZONE.zMin) - sy(ZONE.zMax)}
-          fill="none" stroke="#1E293B" strokeWidth={1.1} strokeDasharray="3 2"
+          fill="none" stroke="#1E293B" strokeWidth={1.2} strokeDasharray="3 2"
         />
-        {locs.slice(0, 250).map((p, i) => (
-          <circle key={i} cx={sx(p.plate_x)} cy={sy(p.plate_z)} r={1.5}
-            fill={pitchColor} fillOpacity={0.28} />
-        ))}
         <HomePlate />
       </svg>
     </div>

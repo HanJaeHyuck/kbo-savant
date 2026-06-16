@@ -12,12 +12,14 @@ import RadarChart from '../components/charts/RadarChart'
 import PitchZoneMap from '../components/charts/PitchZoneMap'
 import PitchCountBreakdown from '../components/charts/PitchCountBreakdown'
 import MovementProfile from '../components/charts/MovementProfile'
+import ZoneHeatmapGrid from '../components/charts/ZoneHeatmapGrid'
 import CareerSplitsTable from '../components/tables/CareerSplitsTable'
+import PitchArsenalTable from '../components/tables/PitchArsenalTable'
 import {
   getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls,
-  getCareerBatting, getCareerPitching,
+  getCareerBatting, getCareerPitching, getPitchArsenal,
 } from '../api/players'
-import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint } from '../types'
+import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow } from '../types'
 
 interface PlayerInfo {
   id: number
@@ -46,6 +48,7 @@ interface PitchesData {
   total_pitches: number
   pitch_mix: PitchType[]
   zone_data: ZoneData[]
+  zone_grid: ZoneGridCell[]
   velocity_trend: VeloPoint[]
   locations: PitchLocation[]
   count_breakdown: PitchCountRow[]
@@ -111,6 +114,7 @@ export default function PlayerDetail() {
   const [pitching, setPitching] = useState<PitchingData | null>(null)
   const [batting, setBatting] = useState<BattingData | null>(null)
   const [pitches, setPitches] = useState<PitchesData | null>(null)
+  const [arsenal, setArsenal] = useState<PitchArsenalRow[]>([])
   const [battedBalls, setBattedBalls] = useState<BattedBallsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -179,6 +183,16 @@ export default function PlayerDetail() {
     loadSeason()
     return () => { cancelled = true }
   }, [playerId, selectedYear, playerInfo])
+
+  // 구종별 트래킹 테이블 (커리어 전체, 시즌 무관 1회 로드)
+  useEffect(() => {
+    if (!playerId || !playerInfo || playerInfo.position !== 'P') return
+    let cancelled = false
+    getPitchArsenal(playerId)
+      .then(d => { if (!cancelled) setArsenal(d?.rows ?? []) })
+      .catch(() => { if (!cancelled) setArsenal([]) })
+    return () => { cancelled = true }
+  }, [playerId, playerInfo])
 
   if (loading) return <LoadingState />
   if (error) return (
@@ -314,6 +328,14 @@ export default function PlayerDetail() {
         {isPitcher
           ? <PitcherChartGrid pitches={pitches} />
           : <BatterChartGrid battedBalls={battedBalls} />}
+
+        {/* 전체너비: 구종별 트래킹 테이블 (투수) */}
+        {isPitcher && arsenal.length > 0 && (
+          <div className="space-y-2">
+            <SectionTitle>구종별 트래킹 (Pitch Tracking) <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 연도 × 구종 상세 + 허용 타구질</span></SectionTitle>
+            <PitchArsenalTable rows={arsenal} />
+          </div>
+        )}
       </main>
     </div>
   )
@@ -552,7 +574,7 @@ function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
       </div>
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center justify-between mb-2">
-          <SectionTitle>스트라이크존 히트맵</SectionTitle>
+          <SectionTitle>스트라이크존 히트맵 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 위치별 밀도</span></SectionTitle>
           <select className="text-xs border rounded px-1 py-0.5" value={zoneMetric}
             onChange={e => setZoneMetric(e.target.value as 'batting_avg' | 'whiff_pct')} data-testid="zone-metric-select">
             <option value="batting_avg">피안타율</option>
@@ -560,7 +582,7 @@ function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
           </select>
         </div>
         <div className="flex justify-center" data-testid="zone-map-container">
-          <StrikeZoneMap data={pitches.zone_data} colorBy={zoneMetric} />
+          <ZoneHeatmapGrid data={pitches.zone_grid} metric={zoneMetric} />
         </div>
       </div>
     </div>

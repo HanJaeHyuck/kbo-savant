@@ -244,9 +244,12 @@ for season in SEASONS:
             result = batted_result(ev, la)
             ang = random.uniform(-48, 48)
             dist = random.uniform(30, 150)
+            # 타구를 만든 구종 (투수 아스널 가중치 기반)
+            pt = random.choices(PITCH_TYPES, PITCH_WEIGHTS)[0]
             ball_rows.append(BattedBall(
                 game_id=f"{season}B{i:04d}_{bpid}", batter_id=bpid, pitcher_id=opp,
                 season=season, game_date=date(season, 4, 1) + timedelta(days=i % 180),
+                pitch_type=pt,
                 exit_velocity=ev, launch_angle=la, direction=random.choice(DIRECTIONS), result=result,
                 spray_x=round(dist * math.sin(math.radians(ang)), 1),
                 spray_y=round(dist * math.cos(math.radians(ang)), 1),

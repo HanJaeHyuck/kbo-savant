@@ -14,6 +14,7 @@ from app.services.data_service import (
     get_pitches_response,
     get_batted_balls_response,
 )
+from app.services.pitch_arsenal_service import get_pitch_arsenal
 
 router = APIRouter(prefix="/api/players", tags=["players"])
 
@@ -84,6 +85,17 @@ async def get_batted_balls(
     db: Session = Depends(get_db),
 ):
     return get_batted_balls_response(player_id, season, db)
+
+
+@router.get("/{player_id}/arsenal")
+async def get_arsenal(player_id: int, db: Session = Depends(get_db)):
+    player = db.query(Player).filter(Player.id == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail={
+            "detail": "선수를 찾을 수 없습니다.",
+            "error_code": "PLAYER_NOT_FOUND"
+        })
+    return get_pitch_arsenal(player_id, db)
 
 
 @router.get("/{player_id}/career/batting")

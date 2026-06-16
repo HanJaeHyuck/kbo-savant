@@ -31,6 +31,11 @@ export const getBattedBalls = async (id: number, season: number) => {
   return data
 }
 
+export const getPitchArsenal = async (id: number) => {
+  const { data } = await apiClient.get(`/api/players/${id}/arsenal`)
+  return data
+}
+
 export const getCareerBatting = async (id: number) => {
   const { data } = await apiClient.get(`/api/players/${id}/career/batting`)
   return data

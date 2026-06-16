@@ -408,18 +408,77 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         for side in ("L", "R")
     }
 
+    # 고해상 존 히트맵 그리드 (가우시안 스무딩) — Savant 스타일
+    zone_grid = _build_zone_grid(pitches)
+
     return {
         "player_id":      player_id,
         "season":         season,
         "total_pitches":  total,
         "pitch_mix":      pitch_mix,
         "zone_data":      zone_data,
+        "zone_grid":      zone_grid,
         "velocity_trend": velocity_trend,
         "locations":      locations,
         "count_breakdown": count_breakdown,
         "movement":       movement,
         "usage_splits":   usage_splits,
     }
+
+
+# 그리드 정의 (홈플레이트 기준 좌우/상하 + 존 바깥 여유)
+_GRID_NX = 7
+_GRID_NZ = 8
+_GRID_XR = (-0.70, 0.70)
+_GRID_ZR = (-0.05, 1.45)
+_GRID_SX = 0.20   # 가우시안 σ (plate_x 단위)
+_GRID_SZ = 0.21   # 가우시안 σ (plate_z 단위)
+_SWING_RESULTS = ("헛스윙", "파울", "인플레이", "번트")
+
+
+def _build_zone_grid(pitches: list) -> list[dict]:
+    """투구 위치를 NX×NZ 그리드로 가우시안 가중 평균하여 피안타율(근사)·Whiff%를 산출."""
+    import math
+    pts = [p for p in pitches if p.plate_x is not None and p.plate_z is not None]
+    if not pts:
+        return []
+    xr0, xr1 = _GRID_XR
+    zr0, zr1 = _GRID_ZR
+    cw = (xr1 - xr0) / _GRID_NX
+    ch = (zr1 - zr0) / _GRID_NZ
+    inv2sx = 1.0 / (2 * _GRID_SX * _GRID_SX)
+    inv2sz = 1.0 / (2 * _GRID_SZ * _GRID_SZ)
+
+    cells = []
+    for row in range(_GRID_NZ):
+        cz = zr0 + (row + 0.5) * ch
+        for col in range(_GRID_NX):
+            cx = xr0 + (col + 0.5) * cw
+            w_sum = 0.0          # 전체 가중치 (밀도)
+            inplay_w = 0.0       # 인플레이 가중합
+            swing_w = 0.0        # 스윙 가중합
+            whiff_w = 0.0        # 헛스윙 가중합
+            for p in pts:
+                dx = p.plate_x - cx
+                dz = p.plate_z - cz
+                w = math.exp(-(dx * dx * inv2sx + dz * dz * inv2sz))
+                w_sum += w
+                if p.result == "인플레이":
+                    inplay_w += w
+                if p.result in _SWING_RESULTS:
+                    swing_w += w
+                    if p.result == "헛스윙":
+                        whiff_w += w
+            batting_avg = round(inplay_w / w_sum, 3) if w_sum > 1e-9 else 0.0
+            whiff_pct = round(whiff_w / swing_w * 100, 1) if swing_w > 1e-9 else 0.0
+            cells.append({
+                "col": col,
+                "row": row,
+                "batting_avg": batting_avg,
+                "whiff_pct": whiff_pct,
+                "weight": round(w_sum, 2),
+            })
+    return cells
 
 
 def get_batted_balls_response(player_id: int, season: int, db: Session) -> dict:

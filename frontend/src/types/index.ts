@@ -152,3 +152,49 @@ export interface CareerSplitsTableProps {
   selectedYear: number
   onYearSelect: (year: number) => void
 }
+
+export interface ZoneGridCell {
+  col: number
+  row: number
+  batting_avg: number
+  whiff_pct: number
+  weight: number
+}
+
+export interface ZoneHeatmapGridProps {
+  data: ZoneGridCell[]
+  metric: 'batting_avg' | 'whiff_pct'
+}
+
+export interface PitchArsenalRow {
+  season: number
+  pitch_type: string
+  count: number
+  rhb: number
+  lhb: number
+  pct: number
+  velocity: number | null
+  spin: number | null
+  pa: number
+  ab: number
+  h: number
+  b2: number
+  b3: number
+  hr: number
+  so: number
+  bbe: number
+  ba: number | null
+  xba: number | null
+  slg: number | null
+  xslg: number | null
+  woba: number | null
+  xwoba: number | null
+  ev: number | null
+  la: number | null
+  whiff_pct: number
+  putaway_pct: number
+}
+
+export interface PitchArsenalTableProps {
+  rows: PitchArsenalRow[]
+}

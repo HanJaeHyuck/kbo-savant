@@ -85,7 +85,16 @@ def _compute(season: int, db: Session) -> dict:
     }
 
     logging.info(f"[xStats] 시즌 {season} 기대스탯 계산 완료 (타자 {len(batter_x)}, 투수 {len(pitcher_x)})")
-    return {"batter_x": batter_x, "pitcher_x": pitcher_x, "batter_pcts": batter_pcts, "pitcher_pcts": pitcher_pcts}
+    return {
+        "batter_x": batter_x, "pitcher_x": pitcher_x,
+        "batter_pcts": batter_pcts, "pitcher_pcts": pitcher_pcts,
+        "model": model if trained else None,
+    }
+
+
+def get_model(season: int, db: Session):
+    """시즌 학습된 KBOExpectedStats 모델 반환 (없으면 None). 구종별 기대스탯 계산용."""
+    return _get(season, db).get("model")
 
 
 def _get(season: int, db: Session) -> dict:

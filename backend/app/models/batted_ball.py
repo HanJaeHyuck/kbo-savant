@@ -11,6 +11,7 @@ class BattedBall(Base):
     pitcher_id = Column(Integer, ForeignKey("players.id"))
     season = Column(Integer, nullable=False)
     game_date = Column(Date, nullable=False)
+    pitch_type = Column(String(20))   # 타구를 만든 투구 구종
     exit_velocity = Column(Float)
     launch_angle = Column(Float)
     hit_distance = Column(Float)
