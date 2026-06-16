@@ -27,3 +27,15 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Test / build artifacts
+.coverage
+backend/.coverage
+htmlcov/
+frontend/test-results/
+frontend/playwright-report/
+frontend/ss_*.png
+
+# Claude Code local
+.claude/settings.local.json
+.claude/launch.json
