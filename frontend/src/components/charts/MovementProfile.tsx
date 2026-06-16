@@ -13,7 +13,7 @@ const Y_RANGE = [-22, 52]   // 유효 수직 무브먼트 cm
 const sx = (v: number) => PAD + ((v - X_RANGE[0]) / (X_RANGE[1] - X_RANGE[0])) * (W - PAD * 2)
 const sy = (v: number) => (H - PAD) - ((v - Y_RANGE[0]) / (Y_RANGE[1] - Y_RANGE[0])) * (H - PAD * 2)
 
-const MovementProfile = React.memo(function MovementProfile({ data }: MovementProfileProps) {
+const MovementProfile = React.memo(function MovementProfile({ data, armAngle }: MovementProfileProps) {
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-[var(--color-text-muted)]" data-testid="movement-empty">
@@ -26,6 +26,11 @@ const MovementProfile = React.memo(function MovementProfile({ data }: MovementPr
 
   return (
     <div data-testid="movement-profile">
+      {armAngle != null && (
+        <div className="flex justify-end mb-1">
+          <span className="text-[11px] text-[var(--color-text-secondary)]">Arm Angle <span className="font-mono font-bold text-[var(--color-text-primary)]">{armAngle.toFixed(0)}°</span></span>
+        </div>
+      )}
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: 320 }} className="block mx-auto">
         <rect x={PAD} y={PAD} width={W - PAD * 2} height={H - PAD * 2} fill="#F8FAFC" stroke="#E2E8F0" strokeWidth={0.5} />
         <line x1={x0} y1={PAD} x2={x0} y2={H - PAD} stroke="#94A3B8" strokeWidth={1} strokeDasharray="3 3" />
@@ -42,12 +47,16 @@ const MovementProfile = React.memo(function MovementProfile({ data }: MovementPr
           )
         })}
       </svg>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
+      {/* 구종별 수평/수직 무브먼트 수치 */}
+      <div className="mt-2 space-y-0.5">
         {data.map(d => (
-          <span key={d.pitch_type} className="flex items-center gap-1 text-[10px] text-[var(--color-text-secondary)]">
-            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: color(d.pitch_type) }} />
-            {d.pitch_type} <span className="font-mono">{d.avg_velocity}</span>
-          </span>
+          <div key={d.pitch_type} className="flex items-center gap-2 text-[10px] text-[var(--color-text-secondary)]">
+            <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color(d.pitch_type) }} />
+            <span className="w-14 shrink-0">{d.pitch_type}</span>
+            <span className="font-mono">{d.avg_velocity}km/h</span>
+            <span className="font-mono ml-auto">수평 {d.h_break > 0 ? '+' : ''}{d.h_break}</span>
+            <span className="font-mono w-14 text-right">수직 {d.v_break > 0 ? '+' : ''}{d.v_break}</span>
+          </div>
         ))}
       </div>
     </div>

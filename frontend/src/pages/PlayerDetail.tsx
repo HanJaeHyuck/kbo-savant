@@ -240,13 +240,13 @@ export default function PlayerDetail() {
 
       <main className="max-w-7xl mx-auto px-4 py-6 pb-20 md:pb-8 space-y-6">
         {/* 히어로 3열: 사진+정보 | 퍼센타일 | 차트 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[270px_minmax(320px,360px)_1fr] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
           {/* 좌측: 선수 사진 + 바이오 + 구종 사용률 + 트래킹 */}
           <div className="space-y-3 min-w-0">
             <PlayerPhoto name={playerInfo.name} position={playerInfo.position} />
             <BioCard info={playerInfo} career={career} isPitcher={isPitcher} />
-            {isPitcher && <PitcherSplits pitching={pitching} pitches={pitches} />}
+            {isPitcher && <PitcherSplits pitches={pitches} />}
             {isPitcher && pitching && (
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{selectedYear} 트래킹 지표</p>
@@ -294,7 +294,7 @@ export default function PlayerDetail() {
           {/* 우측: 핵심 차트 (투수: 무브먼트+구종구성 / 타자: 스프레이+레이더) */}
           <div className="space-y-4 min-w-0">
             {isPitcher
-              ? <PitcherHeroCharts pitches={pitches} />
+              ? <PitcherHeroCharts pitches={pitches} armAngle={pitching?.tracking.arm_angle} />
               : <BatterHeroCharts battedBalls={battedBalls} batting={batting} />}
           </div>
         </div>
@@ -445,58 +445,48 @@ function BioCard({ info, career, isPitcher }: { info: PlayerInfo; career: Career
   )
 }
 
-/* ── 구종 사용률 한 줄(스택 바) ────────────────── */
-function UsageRow({ label, rows }: { label: string; rows?: { pitch_type: string; pct: number }[] }) {
+/* ── 구종 사용률: 각 구종을 개별 바 + % 로 ───────── */
+function UsageGroup({ label, rows }: { label: string; rows?: { pitch_type: string; pct: number }[] }) {
+  const sorted = [...(rows ?? [])].sort((a, b) => b.pct - a.pct)
   return (
-    <div className="mb-1.5">
-      <div className="flex justify-between text-[10px] text-[var(--color-text-muted)]"><span>{label}</span></div>
-      <div className="flex h-3 rounded overflow-hidden bg-[#F1F5F9]">
-        {(rows ?? []).map(r => (
-          <div key={r.pitch_type} style={{ width: `${r.pct}%`, background: PT_COLOR[r.pitch_type] ?? '#9CA3AF' }} title={`${r.pitch_type} ${r.pct}%`} />
+    <div className="mb-2">
+      <p className="text-[10px] text-[var(--color-text-muted)] mb-1">{label}</p>
+      <div className="space-y-1">
+        {sorted.map(r => (
+          <div key={r.pitch_type} className="flex items-center gap-1.5 text-[10px]">
+            <span className="w-12 shrink-0 truncate" style={{ color: PT_COLOR[r.pitch_type] ?? '#9CA3AF' }}>{r.pitch_type}</span>
+            <span className="flex-1 h-2.5 bg-[#F1F5F9] rounded overflow-hidden">
+              <span className="block h-full rounded" style={{ width: `${r.pct}%`, background: PT_COLOR[r.pitch_type] ?? '#9CA3AF' }} />
+            </span>
+            <span className="w-9 text-right font-mono text-[var(--color-text-secondary)]">{r.pct}%</span>
+          </div>
         ))}
       </div>
     </div>
   )
 }
 
-/* ── 좌측: Arm Angle + 구종 사용률(vs 좌/우) ────────── */
-function PitcherSplits({ pitching, pitches }: { pitching: PitchingData | null; pitches: PitchesData | null }) {
-  const arm = pitching?.tracking.arm_angle
+/* ── 좌측: 구종 사용률(vs 좌/우) ──────────────────── */
+function PitcherSplits({ pitches }: { pitches: PitchesData | null }) {
   const splits = pitches?.usage_splits
+  if (!splits) return null
   return (
-    <div className="bg-white rounded-lg shadow p-3 text-xs space-y-2">
-      {arm != null && (
-        <div className="flex justify-between items-center">
-          <span className="text-[var(--color-text-secondary)]">Arm Angle</span>
-          <span className="font-mono font-bold text-[var(--color-text-primary)]">{arm.toFixed(0)}°</span>
-        </div>
-      )}
-      {splits && (
-        <div>
-          <p className="text-[var(--color-text-secondary)] font-semibold mb-1">구종 사용률</p>
-          <UsageRow label="vs 우타" rows={splits.R} />
-          <UsageRow label="vs 좌타" rows={splits.L} />
-          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
-            {(splits.R.length ? splits.R : splits.L).map(r => (
-              <span key={r.pitch_type} className="flex items-center gap-1 text-[9px] text-[var(--color-text-secondary)]">
-                <span className="inline-block w-2 h-2 rounded-full" style={{ background: PT_COLOR[r.pitch_type] ?? '#9CA3AF' }} />{r.pitch_type}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="bg-white rounded-lg shadow p-3 text-xs">
+      <p className="text-[var(--color-text-secondary)] font-semibold mb-2">구종 사용률</p>
+      <UsageGroup label="vs 우타" rows={splits.R} />
+      <UsageGroup label="vs 좌타" rows={splits.L} />
     </div>
   )
 }
 
 /* ── 투수 히어로 차트 (Movement Profile + 구종 구성) ── */
-function PitcherHeroCharts({ pitches }: { pitches: PitchesData | null }) {
+function PitcherHeroCharts({ pitches, armAngle }: { pitches: PitchesData | null; armAngle?: number | null }) {
   if (!pitches) return <SkeletonBlock height="600px" />
   return (
     <>
       <div className="bg-white rounded-lg shadow p-4">
         <SectionTitle>Movement Profile <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별 수평×수직 무브먼트</span></SectionTitle>
-        <MovementProfile data={pitches.movement} />
+        <MovementProfile data={pitches.movement} armAngle={armAngle} />
       </div>
       {pitches.pitch_mix.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4">

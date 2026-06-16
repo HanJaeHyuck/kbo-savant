@@ -46,6 +46,7 @@ export interface MovementPoint {
 
 export interface MovementProfileProps {
   data: MovementPoint[]
+  armAngle?: number | null
 }
 
 export interface Percentiles {
