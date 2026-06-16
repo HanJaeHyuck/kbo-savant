@@ -79,12 +79,22 @@ class KBOExpectedStats:
     def _player_mean(self, batted_balls: list[dict], model, clip) -> Optional[float]:
         if not self._trained:
             return None
-        vals = [
-            self._predict(model, b["exit_velocity"], b["launch_angle"], clip)
+        # 배치 예측 (개별 호출 오버헤드 제거 — 수천 건도 1회 transform/predict로 처리)
+        pts = [
+            (b["exit_velocity"], b["launch_angle"])
             for b in batted_balls
             if b.get("exit_velocity") is not None and b.get("launch_angle") is not None
         ]
-        return round(sum(vals) / len(vals), 3) if vals else None
+        if not pts:
+            return None
+        X = self.scaler.transform(np.asarray(pts, dtype=float))
+        if isinstance(model, LogisticRegression):
+            vals = model.predict_proba(X)[:, 1]
+        else:
+            vals = model.predict(X)
+        if clip:
+            vals = np.clip(vals, clip[0], clip[1])
+        return round(float(np.mean(vals)), 3)
 
     def calc_player_xba(self, batted_balls: list[dict]) -> Optional[float]:
         return self._player_mean(batted_balls, self.xba_model, (0.0, 1.0))
