@@ -150,19 +150,26 @@ for (name, skill) in [(p[0], p[5]) for p in pitchers]:
         s = max(0.2, min(0.99, skill + (si - 2) * 0.04 + jitter(0, 0.03)))
         era = round(jitter(5.4 - s * 3.0, 0.3), 2)
         fip = round(era + jitter(0.2, 0.25), 2)
+        ip = round(jitter(150 + s * 50, 15), 1)
+        k_pct = round(jitter(18 + s * 14, 1.5), 1)
+        bf = ip * 4.2  # 추정 상대 타자 수
         db.add(PitchingStat(
             player_id=pid[name], season=season, games=int(jitter(28, 3)),
-            gs=int(jitter(27, 3)), ip=round(jitter(150 + s * 50, 15), 1),
+            gs=int(jitter(27, 3)), ip=ip,
             wins=int(jitter(6 + s * 9, 2)), losses=int(jitter(9 - s * 4, 2)), saves=0,
             era=era, fip=fip, xfip=round(fip + jitter(0, 0.2), 2),
             era_minus=round(jitter(135 - s * 70, 6), 0), fip_minus=round(jitter(135 - s * 65, 6), 0),
-            k_pct=round(jitter(18 + s * 14, 1.5), 1), bb_pct=round(jitter(11 - s * 5, 1.2), 1),
+            k_pct=k_pct, bb_pct=round(jitter(11 - s * 5, 1.2), 1),
             hr9=round(jitter(1.3 - s * 0.6, 0.15), 2), babip=round(jitter(0.300 - s * 0.02, 0.015), 3),
             lob_pct=round(jitter(70 + s * 9, 2), 1), war=round(jitter(0.8 + s * 5.5, 0.5), 1),
             avg_ev_allowed=round(jitter(147 - s * 8, 1.5), 1),
             hard_hit_pct=round(jitter(38 - s * 14, 2), 1), barrel_pct=round(jitter(8 - s * 5, 1), 1),
             csw_pct=round(jitter(25 + s * 11, 1.5), 1), whiff_pct=round(jitter(21 + s * 13, 1.5), 1),
             chase_pct=round(jitter(27 + s * 11, 1.5), 1),
+            gb_pct=round(jitter(38 + s * 13, 3), 1),
+            fastball_velo=round(jitter(144 + s * 9, 1.2), 1),
+            so=int(k_pct / 100 * bf),
+            whip=round(jitter(1.45 - s * 0.45, 0.06), 2),
             arm_angle=arm_angle[name],
         ))
         pcount += 1

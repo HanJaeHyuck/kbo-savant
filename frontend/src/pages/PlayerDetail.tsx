@@ -39,7 +39,7 @@ interface PitchingData {
   season: number
   classic: { games: number; gs: number; ip: number; wins: number; losses: number; era: number }
   sabermetrics: { fip: number; xfip: number; era_minus: number; fip_minus: number; k_pct: number; bb_pct: number; babip: number; war: number }
-  tracking: { avg_ev_allowed: number; hard_hit_pct: number; barrel_pct: number; csw_pct: number; whiff_pct: number; chase_pct: number; xera?: number | null; arm_angle?: number | null }
+  tracking: { avg_ev_allowed: number; hard_hit_pct: number; barrel_pct: number; csw_pct: number; whiff_pct: number; chase_pct: number; gb_pct?: number | null; fastball_velo?: number | null; xera?: number | null; allowed_xba?: number | null; arm_angle?: number | null }
   run_value: { pitching_rv: number; fastball_rv: number; breaking_rv: number; offspeed_rv: number }
   percentiles: Record<string, number>
 }
@@ -91,6 +91,9 @@ const TOOLTIPS: Record<string, string> = {
   xSLG: '타구속도+발사각 기반 기대 장타율',
   xwOBA: '타구속도+발사각 기반 기대 wOBA',
   xERA: '허용 타구질 기반 기대 ERA (낮을수록 우수)',
+  '허용 xBA': '허용 타구질 기반 기대 피안타율 (낮을수록 우수)',
+  'Fastball Velo': '포심 평균 구속 (높을수록 우수)',
+  'GB%': '땅볼 비율 (높을수록 우수 — 장타 억제)',
   'Pitching RV': '볼카운트 기반 투구 득점 기여 (Context-Neutral, 높을수록 우수)',
   'Fastball RV': '패스트볼 계열 Run Value',
   'Breaking RV': '브레이킹 계열 Run Value',
@@ -256,11 +259,10 @@ export default function PlayerDetail() {
         {/* 히어로 3열: 사진+정보 | 퍼센타일 | 차트 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
-          {/* 좌측: 선수 사진 + 바이오 + 구종 사용률 + 트래킹 */}
+          {/* 좌측: 선수 사진 + 바이오 + 커리어표 + 구종 사용률 + 트래킹 */}
           <div className="space-y-3 min-w-0">
-            <PlayerPhoto name={playerInfo.name} position={playerInfo.position} />
-            <BioCard info={playerInfo} career={career} isPitcher={isPitcher} />
-            {isPitcher && <PitcherSplits pitches={pitches} />}
+            <PlayerHeroCard info={playerInfo} career={career} isPitcher={isPitcher} />
+            {isPitcher && <PitchUsageTable pitches={pitches} season={selectedYear} onNav={navigate} />}
             {isPitcher && pitching && (
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{selectedYear} 트래킹 지표</p>
@@ -348,33 +350,28 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
   return (
     <div className="bg-white rounded-lg shadow p-4 space-y-1" data-testid="percentile-section">
       <PercentileScale />
-      <SubLabel>핵심 가치 지표</SubLabel>
+      <SectionHeader icon="🏆" title="가치 (Value)" />
+      <PercentileBar label="Pitching RV" value={frv(pitching.run_value?.pitching_rv)} percentile={pc.pitching_rv ?? 50} tooltip={TOOLTIPS['Pitching RV']} />
+      <PercentileBar label="Fastball RV" value={frv(pitching.run_value?.fastball_rv)} percentile={pc.fastball_rv ?? 50} tooltip={TOOLTIPS['Fastball RV']} />
+      <PercentileBar label="Breaking RV" value={frv(pitching.run_value?.breaking_rv)} percentile={pc.breaking_rv ?? 50} tooltip={TOOLTIPS['Breaking RV']} />
+      <PercentileBar label="Offspeed RV" value={frv(pitching.run_value?.offspeed_rv)} percentile={pc.offspeed_rv ?? 50} tooltip={TOOLTIPS['Offspeed RV']} />
       <PercentileBar label="WAR" value={pitching.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
       <PercentileBar label="ERA-" value={pitching.sabermetrics.era_minus.toFixed(0)} percentile={pc.era_minus ?? 50} tooltip={TOOLTIPS['ERA-']} />
       <PercentileBar label="FIP" value={pitching.sabermetrics.fip.toFixed(2)} percentile={pc.fip ?? 50} tooltip={TOOLTIPS.FIP} />
-      <PercentileBar label="FIP-" value={pitching.sabermetrics.fip_minus.toFixed(0)} percentile={pc.fip_minus ?? 50} tooltip={TOOLTIPS['FIP-']} />
-      <PercentileBar label="Pitching RV" value={frv(pitching.run_value?.pitching_rv)} percentile={pc.pitching_rv ?? 50} tooltip={TOOLTIPS['Pitching RV']} />
       <Divider />
-      <SubLabel>구위 지표</SubLabel>
+      <SectionHeader icon="⚾" title="투구 (Pitching)" />
+      <PercentileBar label="xERA" value={fx(pitching.tracking.xera, 2)} percentile={pc.xera ?? 50} tooltip={TOOLTIPS.xERA} />
+      <PercentileBar label="허용 xBA" value={fx(pitching.tracking.allowed_xba)} percentile={pc.allowed_xba ?? 50} tooltip={TOOLTIPS['허용 xBA']} />
+      <PercentileBar label="Fastball Velo" value={pitching.tracking.fastball_velo != null ? `${pitching.tracking.fastball_velo.toFixed(1)}` : '—'} percentile={pc.fastball_velo ?? 50} tooltip={TOOLTIPS['Fastball Velo']} />
+      <PercentileBar label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} percentile={pc.avg_ev_allowed ?? 50} tooltip={TOOLTIPS['허용 EV']} />
       <PercentileBar label="CSW%" value={`${pitching.tracking.csw_pct.toFixed(1)}%`} percentile={pc.csw_pct ?? 50} tooltip={TOOLTIPS['CSW%']} />
       <PercentileBar label="Whiff%" value={`${pitching.tracking.whiff_pct.toFixed(1)}%`} percentile={pc.whiff_pct ?? 50} tooltip={TOOLTIPS['Whiff%']} />
       <PercentileBar label="K%" value={`${pitching.sabermetrics.k_pct.toFixed(1)}%`} percentile={pc.k_pct ?? 50} tooltip={TOOLTIPS['K%']} />
       <PercentileBar label="Chase%" value={`${pitching.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} />
-      <Divider />
-      <SubLabel>구종별 Run Value</SubLabel>
-      <PercentileBar label="Fastball RV" value={frv(pitching.run_value?.fastball_rv)} percentile={pc.fastball_rv ?? 50} tooltip={TOOLTIPS['Fastball RV']} />
-      <PercentileBar label="Breaking RV" value={frv(pitching.run_value?.breaking_rv)} percentile={pc.breaking_rv ?? 50} tooltip={TOOLTIPS['Breaking RV']} />
-      <PercentileBar label="Offspeed RV" value={frv(pitching.run_value?.offspeed_rv)} percentile={pc.offspeed_rv ?? 50} tooltip={TOOLTIPS['Offspeed RV']} />
-      <Divider />
-      <SubLabel>허용 타구질</SubLabel>
-      <PercentileBar label="허용 HH%" value={`${pitching.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['허용 HH%']} />
-      <PercentileBar label="허용 Barrel%" value={`${pitching.tracking.barrel_pct.toFixed(1)}%`} percentile={pc.barrel_pct ?? 50} tooltip={TOOLTIPS['허용 Barrel%']} />
-      <PercentileBar label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} percentile={pc.avg_ev_allowed ?? 50} tooltip={TOOLTIPS['허용 EV']} />
-      <PercentileBar label="xERA" value={fx(pitching.tracking.xera, 2)} percentile={pc.xera ?? 50} tooltip={TOOLTIPS.xERA} />
-      <Divider />
-      <SubLabel>제구</SubLabel>
       <PercentileBar label="BB%" value={`${pitching.sabermetrics.bb_pct.toFixed(1)}%`} percentile={pc.bb_pct ?? 50} tooltip={TOOLTIPS['BB%']} />
-      <PercentileBar label="허용 BABIP" value={pitching.sabermetrics.babip.toFixed(3).replace(/^0/, '')} percentile={pc.babip ?? 50} tooltip={TOOLTIPS['허용 BABIP']} />
+      <PercentileBar label="허용 Barrel%" value={`${pitching.tracking.barrel_pct.toFixed(1)}%`} percentile={pc.barrel_pct ?? 50} tooltip={TOOLTIPS['허용 Barrel%']} />
+      <PercentileBar label="허용 HH%" value={`${pitching.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['허용 HH%']} />
+      <PercentileBar label="GB%" value={pitching.tracking.gb_pct != null ? `${pitching.tracking.gb_pct.toFixed(1)}%` : '—'} percentile={pc.gb_pct ?? 50} tooltip={TOOLTIPS['GB%']} />
     </div>
   )
 }
@@ -408,95 +405,170 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
   )
 }
 
-/* ── 선수 사진 플레이스홀더 ──────────────────────── */
-function PlayerPhoto({ name, position }: { name: string; position: string }) {
-  return (
-    <div className="bg-[#0A2240] rounded-lg shadow flex flex-col items-center justify-center py-6" data-testid="player-photo">
-      <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
-        <circle cx="42" cy="42" r="42" fill="#13315C" />
-        <circle cx="42" cy="32" r="15" fill="#9DB2D6" />
-        <path d="M16 78 Q42 50 68 78 Z" fill="#9DB2D6" />
-      </svg>
-      <p className="text-white text-base font-bold mt-2">{name}</p>
-      <p className="text-blue-200 text-xs">{position}</p>
-    </div>
-  )
-}
-
 const PT_COLOR: Record<string, string> = {
   직구: '#1E3A8A', 포심: '#1E3A8A', 슬라이더: '#0F6E56', 체인지업: '#BA7517',
   커브: '#7C3AED', 커터: '#0EA5E9', 싱커: '#65A30D', 스플리터: '#DB2777', 기타: '#9CA3AF',
 }
+const PT_ABBR: Record<string, string> = {
+  직구: 'FF', 포심: 'FF', 슬라이더: 'SL', 체인지업: 'CH',
+  커브: 'CU', 커터: 'FC', 싱커: 'SI', 스플리터: 'FS', 기타: '–',
+}
 const nf = (v: number | null | undefined, d: number) => (v == null ? '-' : v.toFixed(d))
 
-/* ── 좌측 바이오 카드 ─────────────────────────────── */
-function BioCard({ info, career, isPitcher }: { info: PlayerInfo; career: CareerRow[]; isPitcher: boolean }) {
+/* ── 좌측 히어로 카드: 사진 + 바이오 + 커리어표 ──── */
+function PlayerHeroCard({ info, career, isPitcher }: { info: PlayerInfo; career: CareerRow[]; isPitcher: boolean }) {
   const age = info.birth_date ? 2026 - Number(info.birth_date.slice(0, 4)) : null
-  const rows = [...career].sort((a, b) => b.season - a.season).slice(0, 3)
+  const rows = [...career].sort((a, b) => b.season - a.season)
   return (
-    <div className="bg-white rounded-lg shadow p-3 text-xs space-y-2">
-      <p className="text-center text-[var(--color-text-secondary)] font-semibold">{info.position} | {info.team}</p>
-      <div className="space-y-0.5 text-[var(--color-text-secondary)] leading-relaxed">
-        <p>Bats/Throws: {info.bats ?? '-'}/{info.throws ?? '-'}{info.height || info.weight ? ` | ${info.height ?? ''} ${info.weight ?? ''}`.trimEnd() : ''}{age ? ` | Age: ${age}` : ''}</p>
-        {info.draft && <p>{info.draft}</p>}
-        {info.school && <p>출신: {info.school}</p>}
+    <div className="bg-white rounded-lg shadow overflow-hidden" data-testid="player-hero-card">
+      {/* 사진 배너 */}
+      <div className="bg-gradient-to-b from-[#0A2240] to-[#13315C] flex flex-col items-center pt-5 pb-3" data-testid="player-photo">
+        <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
+          <circle cx="46" cy="46" r="46" fill="#13315C" />
+          <circle cx="46" cy="35" r="16" fill="#9DB2D6" />
+          <path d="M16 86 Q46 54 76 86 Z" fill="#9DB2D6" />
+        </svg>
       </div>
+      {/* 이름 + 바이오 */}
+      <div className="px-3 pt-2.5 pb-2 text-center">
+        <p className="text-lg font-bold text-[var(--color-text-primary)]">{info.name}</p>
+        <p className="text-xs text-[var(--color-text-secondary)] font-semibold">{info.position} | {info.team}</p>
+        <div className="space-y-0.5 text-[11px] text-[var(--color-text-secondary)] leading-relaxed mt-1.5">
+          <p>Bats/Throws: {info.bats ?? '-'}/{info.throws ?? '-'}{info.height || info.weight ? ` | ${info.height ?? ''} ${info.weight ?? ''}`.trimEnd() : ''}{age ? ` | Age: ${age}` : ''}</p>
+          {info.draft && <p>Draft: {info.draft}</p>}
+          {info.school && <p>{info.school}</p>}
+        </div>
+      </div>
+      {/* 커리어 테이블 */}
       {rows.length > 0 && (
-        <table className="w-full font-mono text-[10px] border-t pt-1">
-          <thead>
-            <tr className="text-[var(--color-text-muted)]">
-              <th className="text-left font-normal">시즌</th>
-              {isPitcher
-                ? <><th className="font-normal">W-L</th><th className="font-normal">ERA</th><th className="font-normal">IP</th><th className="font-normal">K%</th></>
-                : <><th className="font-normal">AVG</th><th className="font-normal">HR</th><th className="font-normal">OPS</th><th className="font-normal">WAR</th></>}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.season} className="text-[var(--color-text-primary)]">
-                <td className="text-left">{r.season}</td>
-                {isPitcher
-                  ? <><td className="text-center">{r.wins ?? '-'}-{r.losses ?? '-'}</td><td className="text-center">{nf(r.era, 2)}</td><td className="text-center">{nf(r.ip, 1)}</td><td className="text-center">{nf(r.k_pct, 1)}</td></>
-                  : <><td className="text-center">{nf(r.avg, 3).replace(/^0/, '')}</td><td className="text-center">{r.hr ?? '-'}</td><td className="text-center">{nf(r.ops, 3).replace(/^0/, '')}</td><td className="text-center">{nf(r.war, 1)}</td></>}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        isPitcher ? <PitcherCareerMini rows={rows} /> : <BatterCareerMini rows={rows} />
       )}
     </div>
   )
 }
 
-/* ── 구종 사용률: 각 구종을 개별 바 + % 로 ───────── */
-function UsageGroup({ label, rows }: { label: string; rows?: { pitch_type: string; pct: number }[] }) {
-  const sorted = [...(rows ?? [])].sort((a, b) => b.pct - a.pct)
+const PCOL = ['W', 'L', 'ERA', 'G', 'GS', 'SV', 'IP', 'SO', 'WHIP']
+function PitcherCareerMini({ rows }: { rows: CareerRow[] }) {
+  // 통산 합계
+  const sum = (k: string) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0)
+  const ipT = sum('ip')
+  const eraT = ipT > 0 ? rows.reduce((a, r) => a + (Number(r.era) || 0) * (Number(r.ip) || 0), 0) / ipT : 0
+  const whipT = ipT > 0 ? rows.reduce((a, r) => a + (Number(r.whip) || 0) * (Number(r.ip) || 0), 0) / ipT : 0
+  const cell = (r: CareerRow) => [
+    r.wins, r.losses, nf(r.era as number, 2), r.games, r.gs, r.saves, nf(r.ip as number, 1), r.so, nf(r.whip as number, 2),
+  ]
+  const total = [sum('wins'), sum('losses'), eraT.toFixed(2), sum('games'), sum('gs'), sum('saves'), ipT.toFixed(1), sum('so'), whipT.toFixed(2)]
   return (
-    <div className="mb-2">
-      <p className="text-[10px] text-[var(--color-text-muted)] mb-1">{label}</p>
-      <div className="space-y-1">
-        {sorted.map(r => (
-          <div key={r.pitch_type} className="flex items-center gap-1.5 text-[10px]">
-            <span className="w-12 shrink-0 truncate" style={{ color: PT_COLOR[r.pitch_type] ?? '#9CA3AF' }}>{r.pitch_type}</span>
-            <span className="flex-1 h-2.5 bg-[#F1F5F9] rounded overflow-hidden">
-              <span className="block h-full rounded" style={{ width: `${r.pct}%`, background: PT_COLOR[r.pitch_type] ?? '#9CA3AF' }} />
-            </span>
-            <span className="w-9 text-right font-mono text-[var(--color-text-secondary)]">{r.pct}%</span>
-          </div>
-        ))}
-      </div>
+    <div className="overflow-x-auto border-t border-[var(--color-border)]">
+      <table className="w-full min-w-max font-mono text-[10px]">
+        <thead>
+          <tr className="text-[var(--color-text-muted)] bg-[#F4F6FA]">
+            <th className="text-left font-normal px-2 py-1">시즌</th>
+            {PCOL.map(c => <th key={c} className="font-normal px-1.5 py-1 text-right">{c}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.season} className="text-[var(--color-text-primary)] border-t border-[#EEF2F7]">
+              <td className="text-left px-2 py-0.5">{r.season}</td>
+              {cell(r).map((v, i) => <td key={i} className="px-1.5 py-0.5 text-right">{v ?? '-'}</td>)}
+            </tr>
+          ))}
+          <tr className="font-bold text-[var(--color-text-primary)] border-t-2 border-[#CBD5E1] bg-[#F4F6FA]">
+            <td className="text-left px-2 py-0.5">{rows.length}시즌</td>
+            {total.map((v, i) => <td key={i} className="px-1.5 py-0.5 text-right">{v}</td>)}
+          </tr>
+        </tbody>
+      </table>
     </div>
   )
 }
 
-/* ── 좌측: 구종 사용률(vs 좌/우) ──────────────────── */
-function PitcherSplits({ pitches }: { pitches: PitchesData | null }) {
-  const splits = pitches?.usage_splits
-  if (!splits) return null
+const BCOL = ['AVG', 'HR', 'RBI', 'OPS', 'wRC+', 'WAR']
+function BatterCareerMini({ rows }: { rows: CareerRow[] }) {
+  const cell = (r: CareerRow) => [
+    nf(r.avg as number, 3).replace(/^0/, ''), r.hr, r.rbi,
+    nf(r.ops as number, 3).replace(/^0/, ''), r.wrc_plus, nf(r.war as number, 1),
+  ]
   return (
-    <div className="bg-white rounded-lg shadow p-3 text-xs">
-      <p className="text-[var(--color-text-secondary)] font-semibold mb-2">구종 사용률</p>
-      <UsageGroup label="vs 우타" rows={splits.R} />
-      <UsageGroup label="vs 좌타" rows={splits.L} />
+    <div className="overflow-x-auto border-t border-[var(--color-border)]">
+      <table className="w-full min-w-max font-mono text-[10px]">
+        <thead>
+          <tr className="text-[var(--color-text-muted)] bg-[#F4F6FA]">
+            <th className="text-left font-normal px-2 py-1">시즌</th>
+            {BCOL.map(c => <th key={c} className="font-normal px-1.5 py-1 text-right">{c}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.season} className="text-[var(--color-text-primary)] border-t border-[#EEF2F7]">
+              <td className="text-left px-2 py-0.5">{r.season}</td>
+              {cell(r).map((v, i) => <td key={i} className="px-1.5 py-0.5 text-right">{v ?? '-'}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/* ── Pitch Usage (vs 좌/우 + 구종) + Player Apps ──── */
+function UsageBar({ pct, side }: { pct: number; side: 'L' | 'R' }) {
+  const align = side === 'L' ? 'justify-end' : 'justify-start'
+  return (
+    <div className={`flex items-center ${align} gap-1`}>
+      {side === 'L' && <span className="text-[10px] font-mono text-[var(--color-text-secondary)] w-7 text-right">{pct}%</span>}
+      <span className="h-2.5 bg-[#EDF1F7] rounded-full overflow-hidden" style={{ width: 42 }}>
+        <span className={`block h-full bg-[#94A3B8] ${side === 'L' ? 'ml-auto' : ''}`} style={{ width: `${Math.min(100, pct)}%` }} />
+      </span>
+      {side === 'R' && <span className="text-[10px] font-mono text-[var(--color-text-secondary)] w-7">{pct}%</span>}
+    </div>
+  )
+}
+
+function PitchUsageTable({ pitches, season, onNav }: { pitches: PitchesData | null; season: number; onNav: (to: string) => void }) {
+  if (!pitches) return null
+  const mix = [...(pitches.pitch_mix ?? [])].sort((a, b) => b.pct - a.pct)
+  const lMap = new Map((pitches.usage_splits?.L ?? []).map(r => [r.pitch_type, r.pct]))
+  const rMap = new Map((pitches.usage_splits?.R ?? []).map(r => [r.pitch_type, r.pct]))
+  return (
+    <div className="bg-white rounded-lg shadow p-3" data-testid="pitch-usage-table">
+      <p className="text-xs font-bold text-[var(--color-text-primary)] mb-2">{season} Pitch Usage</p>
+      <div className="grid items-center text-[10px] text-[var(--color-text-muted)] mb-1"
+        style={{ gridTemplateColumns: '1fr 1.3fr 1fr' }}>
+        <span className="text-center">vs 좌타</span>
+        <span className="text-center">구종</span>
+        <span className="text-center">vs 우타</span>
+      </div>
+      <div className="space-y-1.5">
+        {mix.map(pt => (
+          <div key={pt.pitch_type} className="grid items-center" style={{ gridTemplateColumns: '1fr 1.3fr 1fr' }}>
+            <UsageBar pct={lMap.get(pt.pitch_type) ?? 0} side="L" />
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[8px] font-bold text-white shrink-0"
+                style={{ background: PT_COLOR[pt.pitch_type] ?? '#9CA3AF' }}>{PT_ABBR[pt.pitch_type] ?? '–'}</span>
+              <span className="text-[11px] font-mono font-semibold text-[var(--color-text-primary)]">{pt.pct.toFixed(0)}%</span>
+            </div>
+            <UsageBar pct={rMap.get(pt.pitch_type) ?? 0} side="R" />
+          </div>
+        ))}
+      </div>
+
+      {/* Player Apps */}
+      <div className="border-t border-[var(--color-border)] mt-3 pt-2">
+        <p className="text-[10px] font-semibold text-[var(--color-text-muted)] mb-1.5">Player Apps</p>
+        <div className="flex flex-wrap gap-1.5">
+          <button onClick={() => onNav('/compare')}
+            className="text-[10px] px-2 py-1 rounded bg-[#EDF1F7] hover:bg-[#DDE5F0] text-[var(--color-primary-mid)] font-medium">
+            선수 비교
+          </button>
+          <button onClick={() => document.querySelector('[data-testid="pitch-arsenal-table"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="text-[10px] px-2 py-1 rounded bg-[#EDF1F7] hover:bg-[#DDE5F0] text-[var(--color-primary-mid)] font-medium">
+            구종 트래킹 ↓
+          </button>
+          <span className="text-[10px] px-2 py-1 rounded bg-[#F4F6FA] text-[var(--color-text-muted)]">유사 선수 (준비중)</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -611,16 +683,27 @@ function BatterChartGrid({ battedBalls }: { battedBalls: BattedBallsData | null 
 function PercentileScale() {
   return (
     <div className="mb-3">
+      <div className="flex justify-between text-[10px] font-semibold mb-0.5">
+        <span className="text-[#1E3A8A]">◀ POOR</span>
+        <span className="text-[var(--color-text-muted)]">AVERAGE</span>
+        <span className="text-[#C0392B]">GREAT ▶</span>
+      </div>
       <div
         className="h-2 rounded-full"
         style={{ background: 'linear-gradient(to right,#1E3A8A,#3498DB,#95A5A6,#E67E22,#C0392B)' }}
       />
-      <div className="flex justify-between text-[9px] text-[var(--color-text-muted)] mt-0.5">
-        <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
-      </div>
       <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
         모든 지표 — 퍼센타일이 <span className="text-[#C0392B] font-semibold">높을수록(빨강) 우수</span>합니다 (허용 지표 포함).
       </p>
+    </div>
+  )
+}
+
+function SectionHeader({ icon, title }: { icon: string; title: string }) {
+  return (
+    <div className="flex items-center gap-1.5 border-b-2 border-[#0A2240] pb-1 mb-2 mt-1">
+      <span className="text-sm">{icon}</span>
+      <span className="text-sm font-bold text-[var(--color-text-primary)]">{title}</span>
     </div>
   )
 }

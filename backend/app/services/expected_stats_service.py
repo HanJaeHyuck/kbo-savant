@@ -82,6 +82,7 @@ def _compute(season: int, db: Session) -> dict:
     }
     pitcher_pcts = {
         "xera": pcts(pitcher_x, "xera", False),
+        "allowed_xba": pcts(pitcher_x, "allowed_xba", False),
     }
 
     logging.info(f"[xStats] 시즌 {season} 기대스탯 계산 완료 (타자 {len(batter_x)}, 투수 {len(pitcher_x)})")
@@ -131,5 +132,8 @@ def get_pitcher_expected(player_id: int, season: int, db: Session) -> dict:
     return {
         "xera": x.get("xera"),
         "allowed_xba": x.get("allowed_xba"),
-        "percentiles": {"xera": d["pitcher_pcts"]["xera"].get(player_id, 50)},
+        "percentiles": {
+            "xera": d["pitcher_pcts"]["xera"].get(player_id, 50),
+            "allowed_xba": d["pitcher_pcts"]["allowed_xba"].get(player_id, 50),
+        },
     }

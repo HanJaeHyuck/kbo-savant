@@ -15,7 +15,7 @@ BATTING_HIGHER_BETTER = {
 BATTING_LOWER_BETTER = {"chase_pct", "whiff_pct", "k"}
 
 # 높을수록 좋은 투수 지표
-PITCHING_HIGHER_BETTER = {"war", "k_pct", "csw_pct", "lob_pct", "whiff_pct", "chase_pct"}
+PITCHING_HIGHER_BETTER = {"war", "k_pct", "csw_pct", "lob_pct", "whiff_pct", "chase_pct", "gb_pct", "fastball_velo"}
 # 낮을수록 좋은 투수 지표
 PITCHING_LOWER_BETTER = {
     "era", "fip", "xfip", "era_minus", "fip_minus",

@@ -163,6 +163,8 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
             "csw_pct":        stat.csw_pct,
             "whiff_pct":      stat.whiff_pct,
             "chase_pct":      stat.chase_pct,
+            "gb_pct":         stat.gb_pct,
+            "fastball_velo":  stat.fastball_velo,
             "arm_angle":      stat.arm_angle,
         }
 
@@ -176,6 +178,7 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
     rv = get_pitcher_run_value(player_id, season, db)
     if stat:
         tracking["xera"] = xs["xera"]
+        tracking["allowed_xba"] = xs["allowed_xba"]
     run_value = {
         "pitching_rv": rv["pitching_rv"],
         "fastball_rv": rv["fastball_rv"],
@@ -197,7 +200,10 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
         "avg_ev_allowed": raw.get("avg_ev_allowed", 50),
         "bb_pct":       raw.get("bb_pct", 50),
         "babip":        raw.get("babip", 50),
+        "gb_pct":       raw.get("gb_pct", 50),
+        "fastball_velo": raw.get("fastball_velo", 50),
         "xera":         xs["percentiles"]["xera"],
+        "allowed_xba":  xs["percentiles"]["allowed_xba"],
         "pitching_rv":  rv["percentiles"]["pitching_rv"],
         "fastball_rv":  rv["percentiles"]["fastball_rv"],
         "breaking_rv":  rv["percentiles"]["breaking_rv"],
@@ -231,6 +237,9 @@ def get_career_pitching_response(player_id: int, db: Session) -> list[dict]:
             "ip":       r.ip,
             "wins":     r.wins,
             "losses":   r.losses,
+            "saves":    r.saves,
+            "so":       r.so,
+            "whip":     r.whip,
             "era":      r.era,
             "fip":      r.fip,
             "xfip":     r.xfip,
@@ -244,6 +253,8 @@ def get_career_pitching_response(player_id: int, db: Session) -> list[dict]:
             "csw_pct":  r.csw_pct,
             "whiff_pct": r.whiff_pct,
             "chase_pct": r.chase_pct,
+            "gb_pct":         r.gb_pct,
+            "fastball_velo":  r.fastball_velo,
             "avg_ev_allowed": r.avg_ev_allowed,
             "hard_hit_pct":   r.hard_hit_pct,
             "barrel_pct":     r.barrel_pct,

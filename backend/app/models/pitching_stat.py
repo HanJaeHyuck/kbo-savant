@@ -31,6 +31,10 @@ class PitchingStat(Base):
     csw_pct = Column(Float)
     whiff_pct = Column(Float)
     chase_pct = Column(Float)
+    gb_pct = Column(Float)         # 땅볼 비율 (높을수록 우수)
+    fastball_velo = Column(Float)  # 포심 평균 구속 (높을수록 우수)
+    so = Column(Integer)           # 시즌 탈삼진
+    whip = Column(Float)           # 이닝당 출루 허용
     arm_angle = Column(Float)   # 릴리스 암 앵글 (도, 0=사이드암 ~ 90=오버핸드)
 
     __table_args__ = (UniqueConstraint("player_id", "season"),)
