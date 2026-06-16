@@ -12,36 +12,32 @@ const RESULT_COLORS: Record<string, string> = {
 const dotColor = (p: PitchLocation, by: 'pitch_type' | 'result') =>
   by === 'result' ? (RESULT_COLORS[p.result] ?? '#9CA3AF') : (PITCH_COLORS[p.pitch_type] ?? '#9CA3AF')
 
-const W = 220, H = 260, PAD = 24
+const W = 110, H = 132, PAD = 10
 const ZONE = { xMin: -0.28, xMax: 0.28, zMin: 0.45, zMax: 1.05 }
 const XR = [-0.7, 0.7], ZR = [0, 1.3]
-const sx = (x: number) => PAD + ((x - XR[0]) / (XR[1] - XR[0])) * (W - PAD * 2)
-const sz = (z: number) => H - PAD - ((z - ZR[0]) / (ZR[1] - ZR[0])) * (H - PAD * 2)
+const sx = (x: number, w = W, pad = PAD) => pad + ((x - XR[0]) / (XR[1] - XR[0])) * (w - pad * 2)
+const sz = (z: number, h = H, pad = PAD) => h - pad - ((z - ZR[0]) / (ZR[1] - ZR[0])) * (h - pad * 2)
 
-// 밀도 → 색 (파랑→크림→빨강)
 function lerp(a: number[], b: number[], t: number) {
   return `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`
 }
-function heatColor(t: number) {
-  return t < 0.5 ? lerp([30, 58, 138], [245, 245, 220], t * 2) : lerp([245, 245, 220], [192, 57, 43], (t - 0.5) * 2)
-}
+const heatColor = (t: number) =>
+  t < 0.5 ? lerp([30, 58, 138], [245, 245, 220], t * 2) : lerp([245, 245, 220], [192, 57, 43], (t - 0.5) * 2)
 
-const NX = 7, NZ = 8
+const NX = 5, NZ = 6
 
-function ZoneFrame() {
+function ZoneBox({ w = W, h = H, pad = PAD }: { w?: number; h?: number; pad?: number }) {
   return (
-    <>
-      <rect x={sx(ZONE.xMin)} y={sz(ZONE.zMax)} width={sx(ZONE.xMax) - sx(ZONE.xMin)}
-        height={sz(ZONE.zMin) - sz(ZONE.zMax)} fill="none" stroke="#111" strokeWidth={1.5} />
-      <polygon points={`${sx(-0.28)},${H - 12} ${sx(0.28)},${H - 12} ${sx(0.28)},${H - 8} ${sx(0)},${H - 4} ${sx(-0.28)},${H - 8}`}
-        fill="#E2E8F0" stroke="#94A3B8" strokeWidth={0.5} />
-    </>
+    <rect x={sx(ZONE.xMin, w, pad)} y={sz(ZONE.zMax, h, pad)}
+      width={sx(ZONE.xMax, w, pad) - sx(ZONE.xMin, w, pad)} height={sz(ZONE.zMin, h, pad) - sz(ZONE.zMax, h, pad)}
+      fill="none" stroke="#111" strokeWidth={1.2} />
   )
 }
 
-function Heatmap({ data }: { data: PitchLocation[] }) {
+/* 구종 한 개의 미니 밀도 히트맵 */
+function MiniHeatmap({ type, locs, count }: { type: string; locs: PitchLocation[]; count: number }) {
   const bins: number[][] = Array.from({ length: NZ }, () => Array(NX).fill(0))
-  for (const p of data) {
+  for (const p of locs) {
     const ix = Math.min(NX - 1, Math.max(0, Math.floor(((p.plate_x - XR[0]) / (XR[1] - XR[0])) * NX)))
     const iz = Math.min(NZ - 1, Math.max(0, Math.floor(((p.plate_z - ZR[0]) / (ZR[1] - ZR[0])) * NZ)))
     bins[iz][ix]++
@@ -49,24 +45,33 @@ function Heatmap({ data }: { data: PitchLocation[] }) {
   const max = Math.max(1, ...bins.flat())
   const cw = (W - PAD * 2) / NX, ch = (H - PAD * 2) / NZ
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: 240 }} data-testid="pitch-zone-map" className="block mx-auto cursor-pointer">
-      {bins.map((row, iz) => row.map((c, ix) => (
-        <rect key={`${iz}-${ix}`} x={PAD + ix * cw} y={PAD + (NZ - 1 - iz) * ch} width={cw} height={ch}
-          fill={c === 0 ? '#F8FAFC' : heatColor(c / max)} fillOpacity={c === 0 ? 0.4 : 0.85} />
-      )))}
-      <ZoneFrame />
-    </svg>
+    <div className="flex flex-col items-center">
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+        {bins.map((row, iz) => row.map((c, ix) => (
+          <rect key={`${iz}-${ix}`} x={PAD + ix * cw} y={PAD + (NZ - 1 - iz) * ch} width={cw} height={ch}
+            fill={c === 0 ? '#F8FAFC' : heatColor(c / max)} fillOpacity={c === 0 ? 0.5 : 0.9} />
+        )))}
+        <ZoneBox />
+      </svg>
+      <span className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: PITCH_COLORS[type] ?? '#475569' }}>
+        <span className="inline-block w-2 h-2 rounded-full" style={{ background: PITCH_COLORS[type] ?? '#9CA3AF' }} />
+        {type} <span className="text-[var(--color-text-muted)]">{count}</span>
+      </span>
+    </div>
   )
 }
 
 function Scatter({ data, colorBy, hovered, onHover }: {
   data: PitchLocation[]; colorBy: 'pitch_type' | 'result'; hovered: number | null; onHover: (i: number | null) => void
 }) {
+  const w = 360, h = 420, pad = 36
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: 440 }} data-testid="pitch-zone-scatter" className="block mx-auto">
-      <ZoneFrame />
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ maxWidth: 360 }} data-testid="pitch-zone-scatter" className="block mx-auto">
+      <rect x={sx(ZONE.xMin, w, pad)} y={sz(ZONE.zMax, h, pad)}
+        width={sx(ZONE.xMax, w, pad) - sx(ZONE.xMin, w, pad)} height={sz(ZONE.zMin, h, pad) - sz(ZONE.zMax, h, pad)}
+        fill="none" stroke="#111" strokeWidth={1.5} />
       {data.map((p, i) => (
-        <circle key={i} cx={sx(p.plate_x)} cy={sz(p.plate_z)} r={hovered === i ? 7 : 5}
+        <circle key={i} cx={sx(p.plate_x, w, pad)} cy={sz(p.plate_z, h, pad)} r={hovered === i ? 7 : 5}
           fill={dotColor(p, colorBy)} fillOpacity={hovered === null || hovered === i ? 0.8 : 0.25}
           stroke={hovered === i ? '#111' : '#fff'} strokeWidth={hovered === i ? 1.2 : 0.5}
           onMouseOver={() => onHover(i)} onMouseOut={() => onHover(null)} />
@@ -75,10 +80,8 @@ function Scatter({ data, colorBy, hovered, onHover }: {
   )
 }
 
-function detailText(p?: PitchLocation) {
-  if (!p) return '점에 마우스를 올리면 상세 정보'
-  return `${p.pitch_type}${p.velocity ? ` · ${p.velocity}km/h` : ''}${p.batter ? ` · vs ${p.batter}` : ''} · ${p.result}`
-}
+const detailText = (p?: PitchLocation) =>
+  !p ? '점에 마우스를 올리면 상세 정보' : `${p.pitch_type}${p.velocity ? ` · ${p.velocity}km/h` : ''}${p.batter ? ` · vs ${p.batter}` : ''} · ${p.result}`
 
 const PitchZoneMap = React.memo(function PitchZoneMap({ data }: PitchZoneMapProps) {
   const [open, setOpen] = useState(false)
@@ -89,14 +92,25 @@ const PitchZoneMap = React.memo(function PitchZoneMap({ data }: PitchZoneMapProp
     return <div className="flex items-center justify-center h-48 text-sm text-[var(--color-text-muted)]" data-testid="pitch-zone-empty">데이터가 없습니다.</div>
   }
 
+  // 구종별 그룹 (구사 많은 순)
+  const groups = new Map<string, PitchLocation[]>()
+  for (const p of data) {
+    const t = p.pitch_type || '기타'
+    if (!groups.has(t)) groups.set(t, [])
+    groups.get(t)!.push(p)
+  }
+  const sorted = [...groups.entries()].sort((a, b) => b[1].length - a[1].length)
   const types = Array.from(new Set(data.map(d => colorBy === 'result' ? d.result : d.pitch_type)))
 
   return (
-    <div>
-      <div onClick={() => setOpen(true)} title="클릭하면 개별 투구(산점도) 보기">
-        <Heatmap data={data} />
+    <div data-testid="pitch-zone-map">
+      <div onClick={() => setOpen(true)} title="클릭하면 개별 투구(산점도) 보기"
+        className="flex flex-wrap gap-3 justify-center cursor-pointer">
+        {sorted.map(([type, locs]) => (
+          <MiniHeatmap key={type} type={type} locs={locs} count={locs.length} />
+        ))}
       </div>
-      <p className="text-[10px] text-center text-[var(--color-text-muted)] mt-1">밀도 히트맵 · 클릭 시 개별 투구</p>
+      <p className="text-[10px] text-center text-[var(--color-text-muted)] mt-1">구종별 밀도 히트맵 · 클릭 시 개별 투구</p>
 
       {open && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setOpen(false)} data-testid="pitch-zone-modal">

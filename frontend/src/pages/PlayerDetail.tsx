@@ -415,7 +415,7 @@ function BioCard({ info, career, isPitcher }: { info: PlayerInfo; career: Career
     <div className="bg-white rounded-lg shadow p-3 text-xs space-y-2">
       <p className="text-center text-[var(--color-text-secondary)] font-semibold">{info.position} | {info.team}</p>
       <div className="space-y-0.5 text-[var(--color-text-secondary)] leading-relaxed">
-        <p>{info.throws ?? '-'}투 {info.bats ?? '-'}타{info.height ? ` · ${info.height}` : ''}{info.weight ? ` ${info.weight}` : ''}{age ? ` · 만 ${age}세` : ''}</p>
+        <p>Bats/Throws: {info.bats ?? '-'}/{info.throws ?? '-'}{info.height || info.weight ? ` | ${info.height ?? ''} ${info.weight ?? ''}`.trimEnd() : ''}{age ? ` | Age: ${age}` : ''}</p>
         {info.draft && <p>{info.draft}</p>}
         {info.school && <p>출신: {info.school}</p>}
       </div>
