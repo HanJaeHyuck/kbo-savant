@@ -83,6 +83,9 @@ curl https://<railway-backend-url>/api/players/search?q=이정
 - [ ] `GET /health` → `{"status":"ok","db":"connected"}`
 - [ ] `GET /api/players/search?q=이정` → 200, 결과 포함
 - [ ] 배포 프론트에서 검색 → 선수 상세 → 퍼센타일 바 렌더링 (프론트↔백엔드 연동)
+- [ ] `GET /api/players/{id}/arsenal` → 200, 구종별 Pitch Tracking rows
+- [ ] `GET /api/players/{id}/similar?season=2024` → 200, 유사 선수 Top 5
+- [ ] 투수 상세 — 탄착군/존 히트맵/Movement Profile/Pitch Tracking 표 렌더링
 - [ ] 모바일 뷰 정상
 - [ ] Railway Cron Job 등록 확인 (`0 1 * * *`, `--once`)
 
