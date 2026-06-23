@@ -10,6 +10,7 @@ import PitchMix from '../components/charts/PitchMix'
 import SprayChart from '../components/charts/SprayChart'
 import RadarChart from '../components/charts/RadarChart'
 import PitchZoneMap from '../components/charts/PitchZoneMap'
+import AttackZones from '../components/charts/AttackZones'
 import PitchCountBreakdown from '../components/charts/PitchCountBreakdown'
 import MovementProfile from '../components/charts/MovementProfile'
 import ZoneHeatmapGrid from '../components/charts/ZoneHeatmapGrid'
@@ -669,6 +670,10 @@ function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
         <div className="flex justify-center" data-testid="zone-map-container">
           <ZoneHeatmapGrid data={pitches.zone_grid} metric={zoneMetric} />
         </div>
+      </div>
+      <div className="bg-white rounded-lg shadow p-4">
+        <SectionTitle>Attack Zones <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 공략 영역(Swing/Take)</span></SectionTitle>
+        <AttackZones data={pitches.locations} />
       </div>
     </div>
   )
