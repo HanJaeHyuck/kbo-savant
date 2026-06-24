@@ -345,6 +345,16 @@ export default function PlayerDetail() {
           ? <PitcherChartGrid pitches={pitches} />
           : <BatterChartGrid battedBalls={battedBalls} />}
 
+        {/* 전체너비: Attack Zones (공략 영역) */}
+        {isPitcher && pitches && (
+          <div className="bg-white rounded-lg shadow p-4">
+            <SectionTitle>Attack Zones <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 공략 영역(Swing/Take)</span></SectionTitle>
+            <div className="max-w-2xl">
+              <AttackZones data={pitches.locations} />
+            </div>
+          </div>
+        )}
+
         {/* 전체너비: 구종별 트래킹 테이블 (투수) */}
         {isPitcher && arsenal.length > 0 && (
           <div className="space-y-2">
@@ -670,10 +680,6 @@ function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
         <div className="flex justify-center" data-testid="zone-map-container">
           <ZoneHeatmapGrid data={pitches.zone_grid} metric={zoneMetric} />
         </div>
-      </div>
-      <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>Attack Zones <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 공략 영역(Swing/Take)</span></SectionTitle>
-        <AttackZones data={pitches.locations} />
       </div>
     </div>
   )
