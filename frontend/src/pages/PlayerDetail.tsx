@@ -11,6 +11,7 @@ import SprayChart from '../components/charts/SprayChart'
 import RadarChart from '../components/charts/RadarChart'
 import PitchZoneMap from '../components/charts/PitchZoneMap'
 import AttackZones from '../components/charts/AttackZones'
+import RollingTrend from '../components/charts/RollingTrend'
 import PitchCountBreakdown from '../components/charts/PitchCountBreakdown'
 import MovementProfile from '../components/charts/MovementProfile'
 import ZoneHeatmapGrid from '../components/charts/ZoneHeatmapGrid'
@@ -21,7 +22,7 @@ import {
   getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls,
   getCareerBatting, getCareerPitching, getPitchArsenal,
 } from '../api/players'
-import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow } from '../types'
+import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint } from '../types'
 
 interface PlayerInfo {
   id: number
@@ -52,6 +53,7 @@ interface PitchesData {
   zone_data: ZoneData[]
   zone_grid: ZoneGridCell[]
   velocity_trend: VeloPoint[]
+  rolling_trend: RollingPoint[]
   locations: PitchLocation[]
   count_breakdown: PitchCountRow[]
   movement: MovementPoint[]
@@ -352,6 +354,14 @@ export default function PlayerDetail() {
             <div className="max-w-2xl">
               <AttackZones data={pitches.locations} />
             </div>
+          </div>
+        )}
+
+        {/* 전체너비: Rolling 트렌드 */}
+        {isPitcher && pitches && pitches.rolling_trend?.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-4">
+            <SectionTitle>Rolling 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 이동평균(구속/Whiff%/CSW%)</span></SectionTitle>
+            <RollingTrend data={pitches.rolling_trend} />
           </div>
         )}
 

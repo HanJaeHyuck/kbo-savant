@@ -422,6 +422,9 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
     # 고해상 존 히트맵 그리드 (가우시안 스무딩) — Savant 스타일
     zone_grid = _build_zone_grid(pitches)
 
+    # Rolling 트렌드 (경기별 구속/Whiff%/CSW% 이동평균, window=3)
+    rolling_trend = _build_rolling_trend(pitches)
+
     return {
         "player_id":      player_id,
         "season":         season,
@@ -430,6 +433,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         "zone_data":      zone_data,
         "zone_grid":      zone_grid,
         "velocity_trend": velocity_trend,
+        "rolling_trend":  rolling_trend,
         "locations":      locations,
         "count_breakdown": count_breakdown,
         "movement":       movement,
@@ -445,6 +449,51 @@ _GRID_ZR = (-0.05, 1.45)
 _GRID_SX = 0.20   # 가우시안 σ (plate_x 단위)
 _GRID_SZ = 0.21   # 가우시안 σ (plate_z 단위)
 _SWING_RESULTS = ("헛스윙", "파울", "인플레이", "번트")
+
+
+def _build_rolling_trend(pitches: list, window: int = 3) -> list[dict]:
+    """경기별 구속/Whiff%/CSW%를 집계 후 window 경기 이동평균으로 평활화."""
+    from collections import defaultdict
+    games: dict = defaultdict(lambda: {"n": 0, "velo": [], "swings": 0, "whiffs": 0, "csw": 0})
+    for p in pitches:
+        if not p.game_date:
+            continue
+        g = games[p.game_date]
+        g["n"] += 1
+        if p.velocity:
+            g["velo"].append(p.velocity)
+        if p.result in _SWING_RESULTS:
+            g["swings"] += 1
+            if p.result == "헛스윙":
+                g["whiffs"] += 1
+        if p.result in ("헛스윙", "루킹스트라이크"):
+            g["csw"] += 1
+
+    dates = sorted(games.keys())
+    per_game = []
+    for d in dates:
+        g = games[d]
+        per_game.append({
+            "velocity": (sum(g["velo"]) / len(g["velo"])) if g["velo"] else None,
+            "whiff_pct": (g["whiffs"] / g["swings"] * 100) if g["swings"] else None,
+            "csw_pct": (g["csw"] / g["n"] * 100) if g["n"] else None,
+        })
+
+    out = []
+    for i, d in enumerate(dates):
+        win = per_game[max(0, i - window + 1): i + 1]
+
+        def rmean(key):
+            vals = [w[key] for w in win if w[key] is not None]
+            return round(sum(vals) / len(vals), 1) if vals else None
+
+        out.append({
+            "game_date": str(d),
+            "velocity": rmean("velocity"),
+            "whiff_pct": rmean("whiff_pct"),
+            "csw_pct": rmean("csw_pct"),
+        })
+    return out
 
 
 def _build_zone_grid(pitches: list) -> list[dict]:

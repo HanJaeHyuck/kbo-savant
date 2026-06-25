@@ -198,3 +198,14 @@ export interface PitchArsenalRow {
 export interface PitchArsenalTableProps {
   rows: PitchArsenalRow[]
 }
+
+export interface RollingPoint {
+  game_date: string
+  velocity: number | null
+  whiff_pct: number | null
+  csw_pct: number | null
+}
+
+export interface RollingTrendProps {
+  data: RollingPoint[]
+}
