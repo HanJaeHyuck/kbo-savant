@@ -12,6 +12,7 @@ import RadarChart from '../components/charts/RadarChart'
 import PitchZoneMap from '../components/charts/PitchZoneMap'
 import AttackZones from '../components/charts/AttackZones'
 import RollingTrend from '../components/charts/RollingTrend'
+import VsHandSplits from '../components/charts/VsHandSplits'
 import PitchCountBreakdown from '../components/charts/PitchCountBreakdown'
 import MovementProfile from '../components/charts/MovementProfile'
 import ZoneHeatmapGrid from '../components/charts/ZoneHeatmapGrid'
@@ -22,7 +23,7 @@ import {
   getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls,
   getCareerBatting, getCareerPitching, getPitchArsenal,
 } from '../api/players'
-import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint } from '../types'
+import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint, VsHandSplitsData } from '../types'
 
 interface PlayerInfo {
   id: number
@@ -54,6 +55,7 @@ interface PitchesData {
   zone_grid: ZoneGridCell[]
   velocity_trend: VeloPoint[]
   rolling_trend: RollingPoint[]
+  vs_hand: VsHandSplitsData
   locations: PitchLocation[]
   count_breakdown: PitchCountRow[]
   movement: MovementPoint[]
@@ -291,6 +293,7 @@ export default function PlayerDetail() {
                 </div>
               </div>
             )}
+            {isPitcher && pitches?.vs_hand && <VsHandSplits data={pitches.vs_hand} />}
             {isPitcher && pitches && (
               <div className="bg-white rounded-lg shadow p-4">
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">볼카운트별 구종</p>

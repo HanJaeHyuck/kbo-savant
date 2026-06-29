@@ -209,3 +209,24 @@ export interface RollingPoint {
 export interface RollingTrendProps {
   data: RollingPoint[]
 }
+
+export interface VsHandStat {
+  pitches: number
+  bbe: number
+  whiff_pct: number
+  csw_pct: number
+  chase_pct: number
+  ba: number
+  woba: number
+  hard_hit_pct: number
+  avg_ev: number
+}
+
+export interface VsHandSplitsData {
+  L: VsHandStat
+  R: VsHandStat
+}
+
+export interface VsHandSplitsProps {
+  data: VsHandSplitsData
+}

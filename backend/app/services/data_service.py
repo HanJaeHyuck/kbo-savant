@@ -425,6 +425,19 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
     # Rolling 트렌드 (경기별 구속/Whiff%/CSW% 이동평균, window=3)
     rolling_trend = _build_rolling_trend(pitches)
 
+    # vs 좌/우타 성적 스플릿
+    allowed = (
+        db.query(BattedBall)
+        .filter(BattedBall.pitcher_id == player_id, BattedBall.season == season)
+        .all()
+    )
+    bb_bats = dict(bats_map)
+    bb_missing = {b.batter_id for b in allowed if b.batter_id} - set(bb_bats.keys())
+    if bb_missing:
+        for row in db.query(Player.id, Player.bats).filter(Player.id.in_(bb_missing)).all():
+            bb_bats[row.id] = row.bats
+    vs_hand = _build_vs_hand(pitches, bats_map, allowed, bb_bats)
+
     return {
         "player_id":      player_id,
         "season":         season,
@@ -438,6 +451,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         "count_breakdown": count_breakdown,
         "movement":       movement,
         "usage_splits":   usage_splits,
+        "vs_hand":        vs_hand,
     }
 
 
@@ -449,6 +463,71 @@ _GRID_ZR = (-0.05, 1.45)
 _GRID_SX = 0.20   # 가우시안 σ (plate_x 단위)
 _GRID_SZ = 0.21   # 가우시안 σ (plate_z 단위)
 _SWING_RESULTS = ("헛스윙", "파울", "인플레이", "번트")
+
+
+_HIT_RESULTS = {"안타": 1, "2루타": 2, "3루타": 3, "홈런": 4}
+
+
+def _build_vs_hand(pitches: list, bats_map: dict, allowed: list, bb_bats: dict) -> dict:
+    """좌/우타 상대 성적 스플릿 (투구지표 + 허용 타구질)."""
+    pt = {h: {"p": 0, "sw": 0, "wh": 0, "csw": 0, "op": 0, "os": 0} for h in ("L", "R")}
+    for p in pitches:
+        h = bats_map.get(p.batter_id)
+        if h not in ("L", "R"):
+            continue
+        d = pt[h]
+        d["p"] += 1
+        outside = p.zone is not None and p.zone >= 11
+        if outside:
+            d["op"] += 1
+        if p.result in _SWING_RESULTS:
+            d["sw"] += 1
+            if outside:
+                d["os"] += 1
+            if p.result == "헛스윙":
+                d["wh"] += 1
+        if p.result in ("헛스윙", "루킹스트라이크"):
+            d["csw"] += 1
+
+    bb = {h: {"bbe": 0, "h": 0, "b1": 0, "b2": 0, "b3": 0, "hr": 0, "ev": [], "hh": 0} for h in ("L", "R")}
+    for b in allowed:
+        h = bb_bats.get(b.batter_id)
+        if h not in ("L", "R"):
+            continue
+        d = bb[h]
+        d["bbe"] += 1
+        if b.exit_velocity is not None:
+            d["ev"].append(b.exit_velocity)
+            if b.exit_velocity >= 150:
+                d["hh"] += 1
+        tb = _HIT_RESULTS.get(b.result)
+        if tb:
+            d["h"] += 1
+            if tb == 4:
+                d["hr"] += 1
+            elif tb == 3:
+                d["b3"] += 1
+            elif tb == 2:
+                d["b2"] += 1
+            else:
+                d["b1"] += 1
+
+    out = {}
+    for h in ("L", "R"):
+        a, c = pt[h], bb[h]
+        woba_num = 0.88 * c["b1"] + 1.24 * c["b2"] + 1.56 * c["b3"] + 2.0 * c["hr"]
+        out[h] = {
+            "pitches":      a["p"],
+            "bbe":          c["bbe"],
+            "whiff_pct":    round(a["wh"] / a["sw"] * 100, 1) if a["sw"] else 0.0,
+            "csw_pct":      round(a["csw"] / a["p"] * 100, 1) if a["p"] else 0.0,
+            "chase_pct":    round(a["os"] / a["op"] * 100, 1) if a["op"] else 0.0,
+            "ba":           round(c["h"] / c["bbe"], 3) if c["bbe"] else 0.0,
+            "woba":         round(woba_num / c["bbe"], 3) if c["bbe"] else 0.0,
+            "hard_hit_pct": round(c["hh"] / c["bbe"] * 100, 1) if c["bbe"] else 0.0,
+            "avg_ev":       round(sum(c["ev"]) / len(c["ev"]), 1) if c["ev"] else 0.0,
+        }
+    return out
 
 
 def _build_rolling_trend(pitches: list, window: int = 3) -> list[dict]:
