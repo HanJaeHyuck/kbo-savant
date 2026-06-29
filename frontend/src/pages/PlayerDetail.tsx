@@ -266,7 +266,7 @@ export default function PlayerDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
           {/* 좌측: 선수 사진 + 바이오 + 커리어표 + 구종 사용률 + 트래킹 */}
-          <div className="space-y-3 min-w-0">
+          <div className="flex flex-col gap-3 min-w-0">
             <PlayerHeroCard info={playerInfo} career={career} isPitcher={isPitcher} />
             {isPitcher && <PitchUsageTable pitches={pitches} season={selectedYear} onNav={navigate} playerId={playerId} playerName={playerInfo.name} />}
             {!isPitcher && (
@@ -282,7 +282,7 @@ export default function PlayerDetail() {
               </div>
             )}
             {isPitcher && pitching && (
-              <div className="bg-white rounded-lg shadow p-4">
+              <div className="bg-white rounded-lg shadow p-4 flex-1">
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{selectedYear} 트래킹 지표</p>
                 <div className="space-y-2">
                   <StatRow label="CSW%" value={`${pitching.tracking.csw_pct.toFixed(1)}%`} data-testid="stat-csw_pct" />
@@ -293,15 +293,8 @@ export default function PlayerDetail() {
                 </div>
               </div>
             )}
-            {isPitcher && pitches?.vs_hand && <VsHandSplits data={pitches.vs_hand} />}
-            {isPitcher && pitches && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">볼카운트별 구종</p>
-                <PitchCountBreakdown data={pitches.count_breakdown} />
-              </div>
-            )}
             {!isPitcher && batting && (
-              <div className="bg-white rounded-lg shadow p-4">
+              <div className="bg-white rounded-lg shadow p-4 flex-1">
                 <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{selectedYear} 트래킹 지표</p>
                 <div className="space-y-2" data-testid="tracking-stats">
                   <StatRow label="하드힛%" value={`${batting.tracking.hard_hit_pct.toFixed(1)}%`} data-testid="stat-hard_hit_pct" />
@@ -316,7 +309,7 @@ export default function PlayerDetail() {
           </div>
 
           {/* 중앙: 퍼센타일 랭킹 */}
-          <div className="space-y-3 min-w-0">
+          <div className="flex flex-col gap-3 min-w-0">
             <div className="flex items-center justify-between">
               <SectionTitle>퍼센타일 랭킹</SectionTitle>
               <span className="text-xs font-mono bg-[#0A2240] text-white rounded px-2 py-0.5">{selectedYear}</span>
@@ -349,6 +342,17 @@ export default function PlayerDetail() {
         {isPitcher
           ? <PitcherChartGrid pitches={pitches} />
           : <BatterChartGrid battedBalls={battedBalls} />}
+
+        {/* 2열: 볼카운트별 구종 + vs 좌/우타 성적 */}
+        {isPitcher && pitches && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className="bg-white rounded-lg shadow p-4">
+              <SectionTitle>볼카운트별 구종</SectionTitle>
+              <PitchCountBreakdown data={pitches.count_breakdown} />
+            </div>
+            {pitches.vs_hand && <VsHandSplits data={pitches.vs_hand} />}
+          </div>
+        )}
 
         {/* 전체너비: Attack Zones (공략 영역) */}
         {isPitcher && pitches && (
@@ -385,7 +389,7 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
   if (!pitching) return <SkeletonBlock height="320px" />
   const pc = pitching.percentiles
   return (
-    <div className="bg-white rounded-lg shadow p-4 space-y-1" data-testid="percentile-section">
+    <div className="bg-white rounded-lg shadow p-4 space-y-1 flex-1" data-testid="percentile-section">
       <PercentileScale />
       <SectionHeader icon="🏆" title="가치 (Value)" />
       <PercentileBar label="Pitching RV" value={frv(pitching.run_value?.pitching_rv)} percentile={pc.pitching_rv ?? 50} tooltip={TOOLTIPS['Pitching RV']} />
@@ -420,7 +424,7 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
   if (!batting) return <SkeletonBlock height="320px" />
   const pc = batting.percentiles
   return (
-    <div className="bg-white rounded-lg shadow p-4 space-y-1" data-testid="batter-percentile-section">
+    <div className="bg-white rounded-lg shadow p-4 space-y-1 flex-1" data-testid="batter-percentile-section">
         <PercentileScale />
         <SubLabel>생산 지표</SubLabel>
         <PercentileBar label="WAR" value={batting.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
