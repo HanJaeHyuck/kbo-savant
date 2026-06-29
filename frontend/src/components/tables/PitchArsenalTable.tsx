@@ -59,7 +59,7 @@ const PitchArsenalTable = React.memo(function PitchArsenalTable({ rows }: PitchA
 
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow" data-testid="pitch-arsenal-table">
-      <table className="min-w-max text-[11px] border-collapse">
+      <table className="w-full min-w-max text-[11px] border-collapse">
         <thead>
           <tr className="bg-[#0A2240] text-white">
             <th className="sticky left-0 z-10 bg-[#0A2240] text-left px-2 py-1.5 font-semibold">연도</th>
