@@ -33,7 +33,20 @@ function classify(x: number, z: number): ZoneKey {
 const HALF: Record<ZoneKey, number> = { heart: 28, shadow: 57, chase: 85, waste: 97 }
 const C = 100
 
+const HAND_OPTS: { key: 'ALL' | 'R' | 'L'; label: string }[] = [
+  { key: 'ALL', label: '전체' },
+  { key: 'R', label: 'vs 우타' },
+  { key: 'L', label: 'vs 좌타' },
+]
+
 const AttackZones = React.memo(function AttackZones({ data }: { data: PitchLocation[] }) {
+  const [hand, setHand] = React.useState<'ALL' | 'R' | 'L'>('ALL')
+  const hasHand = React.useMemo(() => (data ?? []).some(p => p.bat_hand === 'L' || p.bat_hand === 'R'), [data])
+  const filtered = React.useMemo(
+    () => (hand === 'ALL' ? (data ?? []) : (data ?? []).filter(p => p.bat_hand === hand)),
+    [data, hand],
+  )
+
   if (!data || data.length === 0) {
     return <div className="flex items-center justify-center h-40 text-sm text-[var(--color-text-muted)]" data-testid="attack-zones-empty">데이터가 없습니다.</div>
   }
@@ -44,7 +57,7 @@ const AttackZones = React.memo(function AttackZones({ data }: { data: PitchLocat
     chase: { count: 0, swings: 0, whiffs: 0, inplay: 0 },
     waste: { count: 0, swings: 0, whiffs: 0, inplay: 0 },
   }
-  for (const p of data) {
+  for (const p of filtered) {
     if (p.plate_x == null || p.plate_z == null) continue
     const k = classify(p.plate_x, p.plate_z)
     const a = agg[k]
@@ -53,7 +66,7 @@ const AttackZones = React.memo(function AttackZones({ data }: { data: PitchLocat
     if (p.result === '헛스윙') a.whiffs++
     if (p.result === '인플레이') a.inplay++
   }
-  const total = data.length
+  const total = filtered.length || 1
   const maxPct = Math.max(...ZONES.map(z => agg[z.key].count / total), 0.0001)
   const pctOf = (k: ZoneKey) => (agg[k].count / total) * 100
   const swingPct = (k: ZoneKey) => (agg[k].swings ? (agg[k].swings / agg[k].count) * 100 : 0)
@@ -72,7 +85,24 @@ const AttackZones = React.memo(function AttackZones({ data }: { data: PitchLocat
   }
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 items-center" data-testid="attack-zones">
+   <div data-testid="attack-zones">
+    {hasHand && (
+      <div className="flex items-center gap-1.5 mb-3">
+        {HAND_OPTS.map(opt => (
+          <button key={opt.key} onClick={() => setHand(opt.key)}
+            className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+              hand === opt.key
+                ? 'bg-[#0A2240] text-white border-transparent'
+                : 'bg-white text-[var(--color-text-secondary)] border-[var(--color-border)] hover:bg-[#F4F6FA]'
+            }`}
+            data-testid={`attack-zones-hand-${opt.key}`}>
+            {opt.label}
+          </button>
+        ))}
+        <span className="text-[10px] text-[var(--color-text-muted)] ml-auto">{filtered.length}구</span>
+      </div>
+    )}
+    <div className="flex flex-col sm:flex-row gap-4 items-center">
       {/* 중첩 박스 그래픽 */}
       <svg width="100%" viewBox="0 0 200 200" style={{ maxWidth: 200 }} className="shrink-0">
         {/* 바깥→안쪽 순서로 그려 겹침 */}
@@ -123,6 +153,7 @@ const AttackZones = React.memo(function AttackZones({ data }: { data: PitchLocat
         </tbody>
       </table>
     </div>
+   </div>
   )
 })
 
