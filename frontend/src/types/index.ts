@@ -122,6 +122,7 @@ export interface PitchLocation {
   result: string
   velocity?: number
   batter?: string
+  bat_hand?: string | null
 }
 
 export interface PitchCountRow {

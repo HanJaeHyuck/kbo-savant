@@ -367,6 +367,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
             "result":     p.result,
             "velocity":   p.velocity,
             "batter":     name_map.get(p.batter_id, "—"),
+            "bat_hand":   bats_map.get(p.batter_id),
         }
         for p in pitches
         if p.plate_x is not None and p.plate_z is not None

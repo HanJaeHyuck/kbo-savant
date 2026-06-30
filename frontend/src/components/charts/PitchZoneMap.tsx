@@ -105,7 +105,31 @@ const MiniCard = React.memo(function MiniCard({
   )
 })
 
+const HAND_OPTS: { key: 'ALL' | 'R' | 'L'; label: string }[] = [
+  { key: 'ALL', label: '전체' },
+  { key: 'R', label: 'vs 우타' },
+  { key: 'L', label: 'vs 좌타' },
+]
+
 const PitchZoneMap = React.memo(function PitchZoneMap({ data }: PitchZoneMapProps) {
+  const [hand, setHand] = React.useState<'ALL' | 'R' | 'L'>('ALL')
+
+  const filtered = React.useMemo(
+    () => (hand === 'ALL' ? data : (data ?? []).filter(p => p.bat_hand === hand)),
+    [data, hand],
+  )
+  const hasHand = React.useMemo(() => (data ?? []).some(p => p.bat_hand === 'L' || p.bat_hand === 'R'), [data])
+
+  const sorted = React.useMemo(() => {
+    const groups = new Map<string, PitchLocation[]>()
+    for (const p of filtered) {
+      const t = p.pitch_type || '기타'
+      if (!groups.has(t)) groups.set(t, [])
+      groups.get(t)!.push(p)
+    }
+    return [...groups.entries()].sort((a, b) => b[1].length - a[1].length)
+  }, [filtered])
+
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-[var(--color-text-muted)]"
@@ -113,21 +137,33 @@ const PitchZoneMap = React.memo(function PitchZoneMap({ data }: PitchZoneMapProp
     )
   }
 
-  const sorted = React.useMemo(() => {
-    const groups = new Map<string, PitchLocation[]>()
-    for (const p of data) {
-      const t = p.pitch_type || '기타'
-      if (!groups.has(t)) groups.set(t, [])
-      groups.get(t)!.push(p)
-    }
-    return [...groups.entries()].sort((a, b) => b[1].length - a[1].length)
-  }, [data])
-
   return (
-    <div data-testid="pitch-zone-map" className="flex flex-wrap gap-3">
-      {sorted.map(([type, locs]) => (
-        <MiniCard key={type} type={type} locs={locs} total={data.length} />
-      ))}
+    <div data-testid="pitch-zone-map">
+      {hasHand && (
+        <div className="flex items-center gap-1.5 mb-2">
+          {HAND_OPTS.map(opt => (
+            <button key={opt.key} onClick={() => setHand(opt.key)}
+              className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                hand === opt.key
+                  ? 'bg-[#0A2240] text-white border-transparent'
+                  : 'bg-white text-[var(--color-text-secondary)] border-[var(--color-border)] hover:bg-[#F4F6FA]'
+              }`}
+              data-testid={`pitch-zone-hand-${opt.key}`}>
+              {opt.label}
+            </button>
+          ))}
+          <span className="text-[10px] text-[var(--color-text-muted)] ml-auto">{filtered.length}구</span>
+        </div>
+      )}
+      {sorted.length === 0 ? (
+        <div className="flex items-center justify-center h-32 text-sm text-[var(--color-text-muted)]">해당 타석 데이터가 없습니다.</div>
+      ) : (
+        <div className="flex flex-wrap gap-3">
+          {sorted.map(([type, locs]) => (
+            <MiniCard key={type} type={type} locs={locs} total={filtered.length} />
+          ))}
+        </div>
+      )}
     </div>
   )
 })
