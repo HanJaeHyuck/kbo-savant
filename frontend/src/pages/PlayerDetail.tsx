@@ -53,6 +53,7 @@ interface PitchesData {
   pitch_mix: PitchType[]
   zone_data: ZoneData[]
   zone_grid: ZoneGridCell[]
+  zone_grid_hand: { L: ZoneGridCell[]; R: ZoneGridCell[] }
   velocity_trend: VeloPoint[]
   rolling_trend: RollingPoint[]
   vs_hand: VsHandSplitsData
@@ -678,9 +679,17 @@ function BatterHeroCharts({ battedBalls, batting }: { battedBalls: BattedBallsDa
 }
 
 /* ── 투수 하단 차트 그리드 (구속/탄착군/존/볼카운트) ── */
+const ZONE_HAND_OPTS: { key: 'ALL' | 'R' | 'L'; label: string }[] = [
+  { key: 'ALL', label: '전체' },
+  { key: 'R', label: 'vs 우타' },
+  { key: 'L', label: 'vs 좌타' },
+]
+
 function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
   const [zoneMetric, setZoneMetric] = useState<'batting_avg' | 'whiff_pct'>('batting_avg')
+  const [zoneHand, setZoneHand] = useState<'ALL' | 'R' | 'L'>('ALL')
   if (!pitches) return <SkeletonBlock height="300px" />
+  const zoneData = zoneHand === 'ALL' ? pitches.zone_grid : (pitches.zone_grid_hand?.[zoneHand] ?? [])
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-white rounded-lg shadow p-4">
@@ -698,8 +707,21 @@ function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
             <option value="whiff_pct">Whiff%</option>
           </select>
         </div>
+        <div className="flex items-center gap-1.5 mb-2">
+          {ZONE_HAND_OPTS.map(opt => (
+            <button key={opt.key} onClick={() => setZoneHand(opt.key)}
+              className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                zoneHand === opt.key
+                  ? 'bg-[#0A2240] text-white border-transparent'
+                  : 'bg-white text-[var(--color-text-secondary)] border-[var(--color-border)] hover:bg-[#F4F6FA]'
+              }`}
+              data-testid={`zone-hand-${opt.key}`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
         <div className="flex justify-center" data-testid="zone-map-container">
-          <ZoneHeatmapGrid data={pitches.zone_grid} metric={zoneMetric} />
+          <ZoneHeatmapGrid data={zoneData} metric={zoneMetric} />
         </div>
       </div>
     </div>

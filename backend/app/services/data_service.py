@@ -422,6 +422,10 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
 
     # 고해상 존 히트맵 그리드 (가우시안 스무딩) — Savant 스타일
     zone_grid = _build_zone_grid(pitches)
+    zone_grid_hand = {
+        "L": _build_zone_grid([p for p in pitches if bats_map.get(p.batter_id) == "L"]),
+        "R": _build_zone_grid([p for p in pitches if bats_map.get(p.batter_id) == "R"]),
+    }
 
     # Rolling 트렌드 (경기별 구속/Whiff%/CSW% 이동평균, window=3)
     rolling_trend = _build_rolling_trend(pitches)
@@ -446,6 +450,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         "pitch_mix":      pitch_mix,
         "zone_data":      zone_data,
         "zone_grid":      zone_grid,
+        "zone_grid_hand": zone_grid_hand,
         "velocity_trend": velocity_trend,
         "rolling_trend":  rolling_trend,
         "locations":      locations,
