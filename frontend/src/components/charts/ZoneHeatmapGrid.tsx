@@ -54,7 +54,7 @@ const ZoneHeatmapGrid = React.memo(function ZoneHeatmapGrid({ data, metric }: Zo
   const ch = GRID_H / NZ
 
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: 300 }}
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ maxWidth: 420 }}
       data-testid="strike-zone-map" className="block mx-auto">
       {/* 셀 */}
       {data.map(cell => {

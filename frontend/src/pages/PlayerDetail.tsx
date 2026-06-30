@@ -288,8 +288,14 @@ export default function PlayerDetail() {
                   <StatRow label="CSW%" value={`${pitching.tracking.csw_pct.toFixed(1)}%`} data-testid="stat-csw_pct" />
                   <StatRow label="Whiff%" value={`${pitching.tracking.whiff_pct.toFixed(1)}%`} data-testid="stat-whiff_pct" />
                   <StatRow label="Chase%" value={`${pitching.tracking.chase_pct.toFixed(1)}%`} data-testid="stat-chase_pct" />
+                  <StatRow label="K%" value={`${pitching.sabermetrics.k_pct.toFixed(1)}%`} />
+                  <StatRow label="BB%" value={`${pitching.sabermetrics.bb_pct.toFixed(1)}%`} />
+                  <StatRow label="GB%" value={pitching.tracking.gb_pct != null ? `${pitching.tracking.gb_pct.toFixed(1)}%` : '—'} />
+                  <StatRow label="Fastball Velo" value={pitching.tracking.fastball_velo != null ? `${pitching.tracking.fastball_velo.toFixed(1)}` : '—'} />
                   <StatRow label="허용 HH%" value={`${pitching.tracking.hard_hit_pct.toFixed(1)}%`} />
+                  <StatRow label="허용 Barrel%" value={`${pitching.tracking.barrel_pct.toFixed(1)}%`} />
                   <StatRow label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} />
+                  <StatRow label="xERA" value={pitching.tracking.xera != null ? pitching.tracking.xera.toFixed(2) : '—'} />
                 </div>
               </div>
             )}
@@ -343,24 +349,22 @@ export default function PlayerDetail() {
           ? <PitcherChartGrid pitches={pitches} />
           : <BatterChartGrid battedBalls={battedBalls} />}
 
-        {/* 2열: 볼카운트별 구종 + vs 좌/우타 성적 */}
+        {/* 2열: Attack Zones + vs 좌/우타 성적 (높이 일치) */}
         {isPitcher && pitches && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
             <div className="bg-white rounded-lg shadow p-4">
-              <SectionTitle>볼카운트별 구종</SectionTitle>
-              <PitchCountBreakdown data={pitches.count_breakdown} />
+              <SectionTitle>Attack Zones <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 공략 영역(Swing/Take)</span></SectionTitle>
+              <AttackZones data={pitches.locations} />
             </div>
             {pitches.vs_hand && <VsHandSplits data={pitches.vs_hand} />}
           </div>
         )}
 
-        {/* 전체너비: Attack Zones (공략 영역) */}
+        {/* 전체너비: 볼카운트별 구종 */}
         {isPitcher && pitches && (
           <div className="bg-white rounded-lg shadow p-4">
-            <SectionTitle>Attack Zones <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 공략 영역(Swing/Take)</span></SectionTitle>
-            <div className="max-w-2xl">
-              <AttackZones data={pitches.locations} />
-            </div>
+            <SectionTitle>볼카운트별 구종</SectionTitle>
+            <PitchCountBreakdown data={pitches.count_breakdown} />
           </div>
         )}
 
