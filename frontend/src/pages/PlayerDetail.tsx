@@ -18,12 +18,13 @@ import MovementProfile from '../components/charts/MovementProfile'
 import ZoneHeatmapGrid from '../components/charts/ZoneHeatmapGrid'
 import CareerSplitsTable from '../components/tables/CareerSplitsTable'
 import PitchArsenalTable from '../components/tables/PitchArsenalTable'
+import GameLogTable from '../components/tables/GameLogTable'
 import SimilarPlayers from '../components/ui/SimilarPlayers'
 import {
   getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls,
   getCareerBatting, getCareerPitching, getPitchArsenal,
 } from '../api/players'
-import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint, VsHandSplitsData } from '../types'
+import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint, VsHandSplitsData, GameLogRow } from '../types'
 
 interface PlayerInfo {
   id: number
@@ -56,6 +57,7 @@ interface PitchesData {
   zone_grid_hand: { L: ZoneGridCell[]; R: ZoneGridCell[] }
   velocity_trend: VeloPoint[]
   rolling_trend: RollingPoint[]
+  game_log: GameLogRow[]
   vs_hand: VsHandSplitsData
   locations: PitchLocation[]
   count_breakdown: PitchCountRow[]
@@ -374,6 +376,16 @@ export default function PlayerDetail() {
           <div className="bg-white rounded-lg shadow p-4">
             <SectionTitle>Rolling 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 이동평균(구속/Whiff%/CSW%)</span></SectionTitle>
             <RollingTrend data={pitches.rolling_trend} />
+          </div>
+        )}
+
+        {/* 전체너비: 최근 등판 게임로그 */}
+        {isPitcher && pitches && pitches.game_log?.length > 0 && (
+          <div className="space-y-2">
+            <SectionTitle>최근 등판 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 요약</span></SectionTitle>
+            <div className="bg-white rounded-lg shadow">
+              <GameLogTable rows={pitches.game_log} />
+            </div>
           </div>
         )}
 

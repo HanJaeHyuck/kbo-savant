@@ -231,3 +231,17 @@ export interface VsHandSplitsData {
 export interface VsHandSplitsProps {
   data: VsHandSplitsData
 }
+
+export interface GameLogRow {
+  game_date: string
+  pitches: number
+  k: number
+  bb: number
+  whiffs: number
+  inplay: number
+  avg_velocity: number | null
+}
+
+export interface GameLogTableProps {
+  rows: GameLogRow[]
+}

@@ -430,6 +430,9 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
     # Rolling 트렌드 (경기별 구속/Whiff%/CSW% 이동평균, window=3)
     rolling_trend = _build_rolling_trend(pitches)
 
+    # 최근 등판 게임로그
+    game_log = _build_game_log(pitches)
+
     # vs 좌/우타 성적 스플릿
     allowed = (
         db.query(BattedBall)
@@ -453,6 +456,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         "zone_grid_hand": zone_grid_hand,
         "velocity_trend": velocity_trend,
         "rolling_trend":  rolling_trend,
+        "game_log":       game_log,
         "locations":      locations,
         "count_breakdown": count_breakdown,
         "movement":       movement,
@@ -534,6 +538,42 @@ def _build_vs_hand(pitches: list, bats_map: dict, allowed: list, bb_bats: dict) 
             "avg_ev":       round(sum(c["ev"]) / len(c["ev"]), 1) if c["ev"] else 0.0,
         }
     return out
+
+
+def _build_game_log(pitches: list) -> list[dict]:
+    """경기별 등판 요약 (투구/K/BB/헛스윙/인플레이/평균구속). 최근 경기 우선.
+    시드에 실점·이닝·상대 정보가 없어 투구 데이터로 산출 가능한 항목만 제공."""
+    from collections import defaultdict
+    games: dict = defaultdict(lambda: {"p": 0, "k": 0, "bb": 0, "wh": 0, "ip": 0, "velo": []})
+    for p in pitches:
+        if not p.game_date:
+            continue
+        g = games[p.game_date]
+        g["p"] += 1
+        if p.velocity:
+            g["velo"].append(p.velocity)
+        if p.result == "헛스윙":
+            g["wh"] += 1
+        if p.strikes == 2 and p.result in ("헛스윙", "루킹스트라이크"):
+            g["k"] += 1
+        if p.balls == 3 and p.result == "볼":
+            g["bb"] += 1
+        if p.result == "인플레이":
+            g["ip"] += 1
+
+    rows = []
+    for d in sorted(games.keys(), reverse=True):
+        g = games[d]
+        rows.append({
+            "game_date": str(d),
+            "pitches":   g["p"],
+            "k":         g["k"],
+            "bb":        g["bb"],
+            "whiffs":    g["wh"],
+            "inplay":    g["ip"],
+            "avg_velocity": round(sum(g["velo"]) / len(g["velo"]), 1) if g["velo"] else None,
+        })
+    return rows
 
 
 def _build_rolling_trend(pitches: list, window: int = 3) -> list[dict]:
