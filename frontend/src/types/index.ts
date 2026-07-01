@@ -245,3 +245,13 @@ export interface GameLogRow {
 export interface GameLogTableProps {
   rows: GameLogRow[]
 }
+
+export interface BattedProfileData {
+  bbe: number
+  batted_type: { gb: number; ld: number; fb: number; pu: number }
+  spray: { pull: number; center: number; oppo: number }
+}
+
+export interface BattedBallProfileProps {
+  data: BattedProfileData
+}

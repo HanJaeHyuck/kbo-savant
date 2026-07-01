@@ -19,12 +19,13 @@ import ZoneHeatmapGrid from '../components/charts/ZoneHeatmapGrid'
 import CareerSplitsTable from '../components/tables/CareerSplitsTable'
 import PitchArsenalTable from '../components/tables/PitchArsenalTable'
 import GameLogTable from '../components/tables/GameLogTable'
+import BattedBallProfile from '../components/charts/BattedBallProfile'
 import SimilarPlayers from '../components/ui/SimilarPlayers'
 import {
   getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls,
   getCareerBatting, getCareerPitching, getPitchArsenal,
 } from '../api/players'
-import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint, VsHandSplitsData, GameLogRow } from '../types'
+import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint, VsHandSplitsData, GameLogRow, BattedProfileData } from '../types'
 
 interface PlayerInfo {
   id: number
@@ -59,6 +60,7 @@ interface PitchesData {
   rolling_trend: RollingPoint[]
   game_log: GameLogRow[]
   vs_hand: VsHandSplitsData
+  batted_profile: BattedProfileData
   locations: PitchLocation[]
   count_breakdown: PitchCountRow[]
   movement: MovementPoint[]
@@ -363,11 +365,17 @@ export default function PlayerDetail() {
           </div>
         )}
 
-        {/* 전체너비: 볼카운트별 구종 */}
+        {/* 2열: 볼카운트별 구종 + 허용 타구 프로파일 */}
         {isPitcher && pitches && (
-          <div className="bg-white rounded-lg shadow p-4">
-            <SectionTitle>볼카운트별 구종</SectionTitle>
-            <PitchCountBreakdown data={pitches.count_breakdown} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+            <div className="bg-white rounded-lg shadow p-4">
+              <SectionTitle>볼카운트별 구종</SectionTitle>
+              <PitchCountBreakdown data={pitches.count_breakdown} />
+            </div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <SectionTitle>허용 타구 프로파일 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 종류 · 방향</span></SectionTitle>
+              <BattedBallProfile data={pitches.batted_profile} />
+            </div>
           </div>
         )}
 

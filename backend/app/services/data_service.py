@@ -445,6 +445,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         for row in db.query(Player.id, Player.bats).filter(Player.id.in_(bb_missing)).all():
             bb_bats[row.id] = row.bats
     vs_hand = _build_vs_hand(pitches, bats_map, allowed, bb_bats)
+    batted_profile = _build_batted_profile(allowed, bb_bats)
 
     return {
         "player_id":      player_id,
@@ -462,6 +463,7 @@ def get_pitches_response(player_id: int, season: int, db: Session) -> dict:
         "movement":       movement,
         "usage_splits":   usage_splits,
         "vs_hand":        vs_hand,
+        "batted_profile": batted_profile,
     }
 
 
@@ -538,6 +540,45 @@ def _build_vs_hand(pitches: list, bats_map: dict, allowed: list, bb_bats: dict) 
             "avg_ev":       round(sum(c["ev"]) / len(c["ev"]), 1) if c["ev"] else 0.0,
         }
     return out
+
+
+def _build_batted_profile(allowed: list, bb_bats: dict) -> dict:
+    """허용 타구 프로파일 — 타구 종류(GB/LD/FB/PU) + 방향(Pull/Center/Oppo)."""
+    gb = ld = fb = pu = typed = 0
+    pull = center = oppo = sprayed = 0
+    for b in allowed:
+        la = b.launch_angle
+        if la is not None:
+            typed += 1
+            if la < 10:
+                gb += 1
+            elif la < 25:
+                ld += 1
+            elif la < 50:
+                fb += 1
+            else:
+                pu += 1
+        d = b.direction
+        hand = bb_bats.get(b.batter_id)
+        if d in ("좌", "중", "우") and hand in ("L", "R"):
+            sprayed += 1
+            if d == "중":
+                center += 1
+            else:
+                pull_side = "좌" if hand == "R" else "우"  # 당겨친 방향
+                if d == pull_side:
+                    pull += 1
+                else:
+                    oppo += 1
+
+    def pct(n, tot):
+        return round(n / tot * 100, 1) if tot else 0.0
+
+    return {
+        "bbe": typed,
+        "batted_type": {"gb": pct(gb, typed), "ld": pct(ld, typed), "fb": pct(fb, typed), "pu": pct(pu, typed)},
+        "spray": {"pull": pct(pull, sprayed), "center": pct(center, sprayed), "oppo": pct(oppo, sprayed)},
+    }
 
 
 def _build_game_log(pitches: list) -> list[dict]:
