@@ -168,6 +168,7 @@ for (name, skill) in [(p[0], p[5]) for p in pitchers]:
             chase_pct=round(jitter(27 + s * 11, 1.5), 1),
             gb_pct=round(jitter(38 + s * 13, 3), 1),
             fastball_velo=round(jitter(144 + s * 9, 1.2), 1),
+            spin=int(jitter(2250 + s * 260, 80)),
             so=int(k_pct / 100 * bf),
             whip=round(jitter(1.45 - s * 0.45, 0.06), 2),
             arm_angle=arm_angle[name],

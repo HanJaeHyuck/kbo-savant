@@ -45,7 +45,7 @@ interface PitchingData {
   season: number
   classic: { games: number; gs: number; ip: number; wins: number; losses: number; era: number }
   sabermetrics: { fip: number; xfip: number; era_minus: number; fip_minus: number; k_pct: number; bb_pct: number; babip: number; war: number }
-  tracking: { avg_ev_allowed: number; hard_hit_pct: number; barrel_pct: number; csw_pct: number; whiff_pct: number; chase_pct: number; gb_pct?: number | null; fastball_velo?: number | null; xera?: number | null; allowed_xba?: number | null; arm_angle?: number | null }
+  tracking: { avg_ev_allowed: number; hard_hit_pct: number; barrel_pct: number; csw_pct: number; whiff_pct: number; chase_pct: number; gb_pct?: number | null; fastball_velo?: number | null; spin?: number | null; xera?: number | null; allowed_xba?: number | null; arm_angle?: number | null }
   run_value: { pitching_rv: number; fastball_rv: number; breaking_rv: number; offspeed_rv: number }
   percentiles: Record<string, number>
 }
@@ -104,6 +104,7 @@ const TOOLTIPS: Record<string, string> = {
   xERA: '허용 타구질 기반 기대 ERA (낮을수록 우수)',
   '허용 xBA': '허용 타구질 기반 기대 피안타율 (낮을수록 우수)',
   'Fastball Velo': '포심 평균 구속 (높을수록 우수)',
+  Spin: '평균 스핀레이트 RPM (높을수록 우수)',
   'GB%': '땅볼 비율 (높을수록 우수 — 장타 억제)',
   'Pitching RV': '볼카운트 기반 투구 득점 기여 (Context-Neutral, 높을수록 우수)',
   'Fastball RV': '패스트볼 계열 Run Value',
@@ -429,6 +430,7 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
       <PercentileBar label="xERA" value={fx(pitching.tracking.xera, 2)} percentile={pc.xera ?? 50} tooltip={TOOLTIPS.xERA} />
       <PercentileBar label="허용 xBA" value={fx(pitching.tracking.allowed_xba)} percentile={pc.allowed_xba ?? 50} tooltip={TOOLTIPS['허용 xBA']} />
       <PercentileBar label="Fastball Velo" value={pitching.tracking.fastball_velo != null ? `${pitching.tracking.fastball_velo.toFixed(1)}` : '—'} percentile={pc.fastball_velo ?? 50} tooltip={TOOLTIPS['Fastball Velo']} />
+      <PercentileBar label="Spin" value={pitching.tracking.spin != null ? `${pitching.tracking.spin}` : '—'} percentile={pc.spin ?? 50} tooltip={TOOLTIPS.Spin} />
       <PercentileBar label="허용 EV" value={`${pitching.tracking.avg_ev_allowed.toFixed(1)}`} percentile={pc.avg_ev_allowed ?? 50} tooltip={TOOLTIPS['허용 EV']} />
       <PercentileBar label="CSW%" value={`${pitching.tracking.csw_pct.toFixed(1)}%`} percentile={pc.csw_pct ?? 50} tooltip={TOOLTIPS['CSW%']} />
       <PercentileBar label="Whiff%" value={`${pitching.tracking.whiff_pct.toFixed(1)}%`} percentile={pc.whiff_pct ?? 50} tooltip={TOOLTIPS['Whiff%']} />

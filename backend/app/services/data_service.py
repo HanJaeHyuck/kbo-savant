@@ -165,6 +165,7 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
             "chase_pct":      stat.chase_pct,
             "gb_pct":         stat.gb_pct,
             "fastball_velo":  stat.fastball_velo,
+            "spin":           stat.spin,
             "arm_angle":      stat.arm_angle,
         }
 
@@ -202,6 +203,7 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
         "babip":        raw.get("babip", 50),
         "gb_pct":       raw.get("gb_pct", 50),
         "fastball_velo": raw.get("fastball_velo", 50),
+        "spin":         raw.get("spin", 50),
         "xera":         xs["percentiles"]["xera"],
         "allowed_xba":  xs["percentiles"]["allowed_xba"],
         "pitching_rv":  rv["percentiles"]["pitching_rv"],
