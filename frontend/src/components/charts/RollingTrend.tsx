@@ -58,7 +58,8 @@ const RollingTrend = React.memo(function RollingTrend({ data }: RollingTrendProp
             }}
           />
           <Line type="monotone" dataKey={metric} name={m.label} stroke={m.color}
-            strokeWidth={2.4} dot={{ r: 2 }} activeDot={{ r: 4 }} connectNulls />
+            strokeWidth={2.4} dot={{ r: 2 }} activeDot={{ r: 4 }} connectNulls
+            isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>

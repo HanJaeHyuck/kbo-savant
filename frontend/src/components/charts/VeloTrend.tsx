@@ -49,6 +49,7 @@ const VeloTrend = React.memo(function VeloTrend({ data }: VeloTrendProps) {
               dot={{ r: 2 }}
               activeDot={{ r: 4 }}
               connectNulls
+              isAnimationActive={false}
             />
           ))}
         </LineChart>

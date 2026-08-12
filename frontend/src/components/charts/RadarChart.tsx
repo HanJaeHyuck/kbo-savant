@@ -54,6 +54,7 @@ const RadarChart = React.memo(function RadarChart({ players, stats }: RadarChart
               stroke={PLAYER_COLORS[i % PLAYER_COLORS.length]}
               fill={PLAYER_COLORS[i % PLAYER_COLORS.length]}
               fillOpacity={0.2}
+              isAnimationActive={false}
             />
           ))}
           {players.length > 1 && <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />}

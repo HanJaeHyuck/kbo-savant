@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import NavBar from '../components/ui/NavBar'
 import PercentileBar from '../components/ui/PercentileBar'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
 import ErrorMessage from '../components/ui/ErrorMessage'
 import StrikeZoneMap from '../components/charts/StrikeZoneMap'
-import VeloTrend from '../components/charts/VeloTrend'
 import PitchMix from '../components/charts/PitchMix'
 import SprayChart from '../components/charts/SprayChart'
-import RadarChart from '../components/charts/RadarChart'
+// Recharts 기반 차트는 지연 로딩 — 초기 렌더/번들에서 제외 (저사양 PC 체감 개선)
+const VeloTrend = lazy(() => import('../components/charts/VeloTrend'))
+const RollingTrend = lazy(() => import('../components/charts/RollingTrend'))
+const RadarChart = lazy(() => import('../components/charts/RadarChart'))
 import PitchZoneMap from '../components/charts/PitchZoneMap'
 import AttackZones from '../components/charts/AttackZones'
-import RollingTrend from '../components/charts/RollingTrend'
 import VsHandSplits from '../components/charts/VsHandSplits'
 import PitchCountBreakdown from '../components/charts/PitchCountBreakdown'
 import MovementProfile from '../components/charts/MovementProfile'
@@ -384,7 +385,9 @@ export default function PlayerDetail() {
         {isPitcher && pitches && pitches.rolling_trend?.length > 0 && (
           <div className="bg-white rounded-lg shadow p-4">
             <SectionTitle>Rolling 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 이동평균(구속/Whiff%/CSW%)</span></SectionTitle>
-            <RollingTrend data={pitches.rolling_trend} />
+            <Suspense fallback={<SkeletonBlock height="260px" />}>
+              <RollingTrend data={pitches.rolling_trend} />
+            </Suspense>
           </div>
         )}
 
@@ -658,7 +661,9 @@ function PitcherHeroCharts({ pitches, armAngle }: { pitches: PitchesData | null;
       )}
       <div className="bg-white rounded-lg shadow p-4">
         <SectionTitle>구속 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별</span></SectionTitle>
-        <VeloTrend data={pitches.velocity_trend} />
+        <Suspense fallback={<SkeletonBlock height="200px" />}>
+          <VeloTrend data={pitches.velocity_trend} />
+        </Suspense>
       </div>
     </>
   )
@@ -693,7 +698,9 @@ function BatterHeroCharts({ battedBalls, batting }: { battedBalls: BattedBallsDa
       {radarPlayers.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4">
           <SectionTitle>레이더 차트</SectionTitle>
-          <RadarChart players={radarPlayers} stats={RADAR_STATS} />
+          <Suspense fallback={<SkeletonBlock height="220px" />}>
+            <RadarChart players={radarPlayers} stats={RADAR_STATS} />
+          </Suspense>
         </div>
       )}
     </>
