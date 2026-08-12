@@ -77,6 +77,31 @@ curl https://<railway-backend-url>/api/players/search?q=이정
 
 ---
 
+## 4-1. 로컬에서 프로덕션 성능 확인하기
+
+개발 서버(`npm run dev`)는 모듈을 즉석 컴파일하므로 **실제 배포보다 느립니다.**
+체감 속도를 정확히 보려면 프로덕션 빌드로 확인하세요.
+
+```bash
+cd frontend
+npm run build
+npx vite preview --port 4173
+# http://localhost:4173 접속
+```
+
+실측 비교 (선수 상세 페이지 기준):
+
+| 항목 | 프로덕션 빌드 | 개발 서버 |
+|---|---|---|
+| HTML 응답 | 0.03s | 1.57s |
+| DOM 완료 | 723ms | 1,481ms |
+| 리소스 요청 수 | 10개 | 44개 |
+
+> 백엔드 API는 사전 계산(precompute) 덕에 상시 0.2초대입니다.
+> 느리게 느껴진다면 개발 서버 특성이거나 브라우저 렌더 비용이지, DB/크롤링 문제가 아닙니다.
+
+---
+
 ## 5. 최종 검증 (Goal 13 체크리스트)
 
 - [ ] Vercel 프론트 URL 접근 가능
