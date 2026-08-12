@@ -33,5 +33,9 @@ class BattingStat(Base):
     avg_ev = Column(Float)
     chase_pct = Column(Float)
     whiff_pct = Column(Float)
+    # ML 기대스탯 사전 계산값 (크롤링/시드 후 1회 계산해 저장 → API는 읽기만)
+    xba = Column(Float)
+    xslg = Column(Float)
+    xwoba = Column(Float)
 
     __table_args__ = (UniqueConstraint("player_id", "season"),)

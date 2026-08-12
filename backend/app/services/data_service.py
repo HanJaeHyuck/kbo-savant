@@ -67,12 +67,13 @@ def get_batting_stats_response(player_id: int, season: int, db: Session) -> dict
     raw = all_pcts.get(player_id, {})
 
     # 기대 스탯 (xBA/xSLG/xwOBA)
+    # DB에 사전 계산값이 있으면 그대로 사용(빠름), 없으면 모델로 계산(폴백)
     from app.services.expected_stats_service import get_batter_expected
     xs = get_batter_expected(player_id, season, db)
     if stat:
-        tracking["xba"] = xs["xba"]
-        tracking["xslg"] = xs["xslg"]
-        tracking["xwoba"] = xs["xwoba"]
+        tracking["xba"] = stat.xba if stat.xba is not None else xs["xba"]
+        tracking["xslg"] = stat.xslg if stat.xslg is not None else xs["xslg"]
+        tracking["xwoba"] = stat.xwoba if stat.xwoba is not None else xs["xwoba"]
 
     percentiles = {
         "war":          raw.get("war", 50),
@@ -178,8 +179,8 @@ def get_pitching_stats_response(player_id: int, season: int, db: Session) -> dic
     xs = get_pitcher_expected(player_id, season, db)
     rv = get_pitcher_run_value(player_id, season, db)
     if stat:
-        tracking["xera"] = xs["xera"]
-        tracking["allowed_xba"] = xs["allowed_xba"]
+        tracking["xera"] = stat.xera if stat.xera is not None else xs["xera"]
+        tracking["allowed_xba"] = stat.allowed_xba if stat.allowed_xba is not None else xs["allowed_xba"]
     run_value = {
         "pitching_rv": rv["pitching_rv"],
         "fastball_rv": rv["fastball_rv"],

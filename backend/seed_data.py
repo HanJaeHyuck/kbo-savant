@@ -266,6 +266,11 @@ db.bulk_save_objects(ball_rows)
 db.commit()
 print(f"타구 {len(ball_rows)}개 등록 완료")
 
+# ── ML 기대스탯 사전 계산 → DB 저장 (API 콜드 지연 제거) ──
+from app.services.precompute_service import precompute_all
+for r in precompute_all(db):
+    print(f"기대스탯 저장 - 시즌 {r['season']}: 타자 {r['batters']}, 투수 {r['pitchers']}")
+
 db.close()
 print("\n시드 데이터 완료!")
 print(f"  선수 {len(player_objs)} | 타자스탯 {bcount} | 투수스탯 {pcount} | 투구 {len(pitch_rows)} | 타구 {len(ball_rows)}")
