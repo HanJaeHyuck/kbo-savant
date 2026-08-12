@@ -89,6 +89,15 @@ npx vite preview --port 4173
 # http://localhost:4173 접속
 ```
 
+> **주의 — 프로덕션 빌드는 dev와 API 연결 방식이 다릅니다.**
+> dev는 Vite 프록시(`/api` → 8000)를 쓰지만, 프로덕션 빌드는 `VITE_API_URL`로 **직접 호출**합니다.
+> 그래서 로컬 프리뷰 시 두 가지를 맞춰야 데이터가 뜹니다 (안 하면 화면이 빈 상태):
+>
+> 1. `frontend/.env.production.local` 생성 → `VITE_API_URL=http://localhost:8000` (빌드 전에 만들 것)
+> 2. `backend/.env`의 `ALLOWED_ORIGINS`에 `http://localhost:4173` 추가 후 백엔드 재시작 (CORS)
+>
+> 두 파일 모두 gitignore 대상이므로 각자 로컬에 만들어야 합니다.
+
 실측 비교 (선수 상세 페이지 기준):
 
 | 항목 | 프로덕션 빌드 | 개발 서버 |
