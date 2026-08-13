@@ -748,10 +748,163 @@ def get_batted_balls_response(player_id: int, season: int, db: Session) -> dict:
         for direction, d in zone_map.items()
     ]
 
+    # 상대 투수 투구손 (vs 좌/우투 스플릿용)
+    pitcher_ids = {b.pitcher_id for b in balls if b.pitcher_id}
+    throws_map: dict = {}
+    if pitcher_ids:
+        for row in db.query(Player.id, Player.throws).filter(Player.id.in_(pitcher_ids)).all():
+            throws_map[row.id] = row.throws
+
     return {
         "player_id":  player_id,
         "season":     season,
         "total":      len(balls),
         "spray_data": spray_data,
         "zone_avg":   zone_avg,
+        "vs_hand":        _batter_vs_hand(balls, throws_map),
+        "batted_profile": _batter_batted_profile(balls),
+        "rolling_trend":  _batter_rolling(balls),
+        "game_log":       _batter_game_log(balls),
+        "arsenal":        _batter_arsenal(balls),
     }
+
+
+# ── 타자 확장 집계 ────────────────────────────────────
+
+def _bb_agg() -> dict:
+    return {"bbe": 0, "h": 0, "b1": 0, "b2": 0, "b3": 0, "hr": 0, "ev": [], "la": [],
+            "hh": 0, "barrel": 0, "sweet": 0}
+
+
+def _bb_add(d: dict, b) -> None:
+    d["bbe"] += 1
+    ev, la = b.exit_velocity, b.launch_angle
+    if ev is not None:
+        d["ev"].append(ev)
+        if ev >= 150:
+            d["hh"] += 1
+        if ev >= 158 and la is not None and 26 <= la <= 30:
+            d["barrel"] += 1
+    if la is not None:
+        d["la"].append(la)
+        if 8 <= la <= 32:
+            d["sweet"] += 1
+    tb = _HIT_RESULTS.get(b.result)
+    if tb:
+        d["h"] += 1
+        if tb == 4:   d["hr"] += 1
+        elif tb == 3: d["b3"] += 1
+        elif tb == 2: d["b2"] += 1
+        else:         d["b1"] += 1
+
+
+def _bb_stats(d: dict) -> dict:
+    n = d["bbe"]
+    woba_num = 0.88 * d["b1"] + 1.24 * d["b2"] + 1.56 * d["b3"] + 2.0 * d["hr"]
+    tb = d["b1"] + 2 * d["b2"] + 3 * d["b3"] + 4 * d["hr"]
+    pc = lambda x: round(x / n * 100, 1) if n else 0.0
+    return {
+        "bbe": n,
+        "ba":   round(d["h"] / n, 3) if n else 0.0,
+        "slg":  round(tb / n, 3) if n else 0.0,
+        "woba": round(woba_num / n, 3) if n else 0.0,
+        "hr":   d["hr"],
+        "avg_ev": round(sum(d["ev"]) / len(d["ev"]), 1) if d["ev"] else 0.0,
+        "avg_la": round(sum(d["la"]) / len(d["la"]), 1) if d["la"] else 0.0,
+        "hard_hit_pct": pc(d["hh"]),
+        "barrel_pct":   pc(d["barrel"]),
+        "sweet_spot_pct": pc(d["sweet"]),
+    }
+
+
+def _batter_vs_hand(balls: list, throws_map: dict) -> dict:
+    """vs 좌투/우투 타격 성적."""
+    g = {"L": _bb_agg(), "R": _bb_agg()}
+    for b in balls:
+        t = throws_map.get(b.pitcher_id)
+        if t in ("L", "R"):
+            _bb_add(g[t], b)
+    return {h: _bb_stats(g[h]) for h in ("L", "R")}
+
+
+def _batter_batted_profile(balls: list) -> dict:
+    """타구 종류(GB/LD/FB/PU) + 방향(Pull/Center/Oppo). 방향은 타구 direction 기준."""
+    gb = ld = fb = pu = typed = 0
+    pull = center = oppo = sprayed = 0
+    for b in balls:
+        la = b.launch_angle
+        if la is not None:
+            typed += 1
+            if la < 10:   gb += 1
+            elif la < 25: ld += 1
+            elif la < 50: fb += 1
+            else:         pu += 1
+        if b.direction in ("좌", "중", "우"):
+            sprayed += 1
+            if b.direction == "중": center += 1
+            elif b.direction == "좌": pull += 1
+            else: oppo += 1
+    pct = lambda n, t: round(n / t * 100, 1) if t else 0.0
+    return {
+        "bbe": typed,
+        "batted_type": {"gb": pct(gb, typed), "ld": pct(ld, typed), "fb": pct(fb, typed), "pu": pct(pu, typed)},
+        "spray": {"pull": pct(pull, sprayed), "center": pct(center, sprayed), "oppo": pct(oppo, sprayed)},
+    }
+
+
+def _batter_rolling(balls: list, window: int = 5) -> list[dict]:
+    """경기별 wOBA/평균EV를 window 경기 이동평균으로."""
+    from collections import defaultdict
+    games: dict = defaultdict(_bb_agg)
+    for b in balls:
+        if b.game_date:
+            _bb_add(games[b.game_date], b)
+    dates = sorted(games.keys())
+    per = [_bb_stats(games[d]) for d in dates]
+    out = []
+    for i, d in enumerate(dates):
+        win = per[max(0, i - window + 1): i + 1]
+        rm = lambda k: round(sum(w[k] for w in win) / len(win), 3) if win else None
+        out.append({
+            "game_date": str(d),
+            "woba": rm("woba"),
+            "avg_ev": round(sum(w["avg_ev"] for w in win) / len(win), 1) if win else None,
+            "hard_hit_pct": round(sum(w["hard_hit_pct"] for w in win) / len(win), 1) if win else None,
+        })
+    return out
+
+
+def _batter_game_log(balls: list) -> list[dict]:
+    """경기별 타구 요약 (최근순)."""
+    from collections import defaultdict
+    games: dict = defaultdict(_bb_agg)
+    for b in balls:
+        if b.game_date:
+            _bb_add(games[b.game_date], b)
+    rows = []
+    for d in sorted(games.keys(), reverse=True)[:20]:   # 최근 20경기
+        s = _bb_stats(games[d])
+        rows.append({
+            "game_date": str(d), "bbe": s["bbe"], "h": games[d]["h"], "hr": s["hr"],
+            "ba": s["ba"], "avg_ev": s["avg_ev"], "hard_hit_pct": s["hard_hit_pct"],
+        })
+    return rows
+
+
+def _batter_arsenal(balls: list) -> list[dict]:
+    """구종별 타격 성적 (투수 Pitch Tracking의 타자 버전)."""
+    from collections import defaultdict
+    g: dict = defaultdict(_bb_agg)
+    for b in balls:
+        g[b.pitch_type or "기타"] = g[b.pitch_type or "기타"]
+        _bb_add(g[b.pitch_type or "기타"], b)
+    total = sum(d["bbe"] for d in g.values())
+    rows = []
+    for pt, d in sorted(g.items(), key=lambda kv: -kv[1]["bbe"]):
+        s = _bb_stats(d)
+        rows.append({
+            "pitch_type": pt,
+            "pct": round(d["bbe"] / total * 100, 1) if total else 0.0,
+            **s,
+        })
+    return rows
