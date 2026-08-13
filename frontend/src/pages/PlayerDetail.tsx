@@ -105,6 +105,8 @@ const TOOLTIPS: Record<string, string> = {
   '허용 EV': '허용 평균 타구속도 (낮을수록 우수)',
   'wRC+': '조정 득점 생산력 (100=리그 평균)',
   OPS: '출루율 + 장타율',
+  wOBA: '가중 출루율 — 타격 이벤트별 득점 가치를 반영',
+  '스위트스팟%': '발사각 8~32도 타구 비율 (안타가 되기 좋은 각도)',
   '하드힛%': '강한 타구(150km/h 이상) 비율',
   '배럴%': '최적 타구(타구속도+발사각) 비율',
   '평균 EV': '평균 타구속도',
@@ -374,7 +376,7 @@ export default function PlayerDetail() {
         {isPitcher && pitches && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
             <div className="bg-white rounded-lg shadow p-4">
-              <SectionTitle>Attack Zones <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 공략 영역(Swing/Take)</span></SectionTitle>
+              <SectionTitle demo>Attack Zones <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 공략 영역(Swing/Take)</span></SectionTitle>
               <AttackZones data={pitches.locations} />
             </div>
             {pitches.vs_hand && <VsHandSplits data={pitches.vs_hand} />}
@@ -385,11 +387,11 @@ export default function PlayerDetail() {
         {isPitcher && pitches && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
             <div className="bg-white rounded-lg shadow p-4">
-              <SectionTitle>볼카운트별 구종</SectionTitle>
+              <SectionTitle demo>볼카운트별 구종</SectionTitle>
               <PitchCountBreakdown data={pitches.count_breakdown} />
             </div>
             <div className="bg-white rounded-lg shadow p-4">
-              <SectionTitle>허용 타구 프로파일 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 종류 · 방향</span></SectionTitle>
+              <SectionTitle demo>허용 타구 프로파일 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 종류 · 방향</span></SectionTitle>
               <BattedBallProfile data={pitches.batted_profile} />
             </div>
           </div>
@@ -398,7 +400,7 @@ export default function PlayerDetail() {
         {/* 전체너비: Rolling 트렌드 */}
         {isPitcher && pitches && pitches.rolling_trend?.length > 0 && (
           <div className="bg-white rounded-lg shadow p-4">
-            <SectionTitle>Rolling 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 이동평균(구속/Whiff%/CSW%)</span></SectionTitle>
+            <SectionTitle demo>Rolling 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 이동평균(구속/Whiff%/CSW%)</span></SectionTitle>
             <Suspense fallback={<SkeletonBlock height="260px" />}>
               <RollingTrend data={pitches.rolling_trend} />
             </Suspense>
@@ -408,7 +410,7 @@ export default function PlayerDetail() {
         {/* 전체너비: 최근 등판 게임로그 */}
         {isPitcher && pitches && pitches.game_log?.length > 0 && (
           <div className="space-y-2">
-            <SectionTitle>최근 등판 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 요약</span></SectionTitle>
+            <SectionTitle demo>최근 등판 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 요약</span></SectionTitle>
             <div className="bg-white rounded-lg shadow">
               <GameLogTable rows={pitches.game_log} />
             </div>
@@ -418,7 +420,7 @@ export default function PlayerDetail() {
         {/* 전체너비: 구종별 트래킹 테이블 (투수) */}
         {isPitcher && arsenal.length > 0 && (
           <div className="space-y-2">
-            <SectionTitle>구종별 트래킹 (Pitch Tracking) <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 연도 × 구종 상세 + 허용 타구질</span></SectionTitle>
+            <SectionTitle demo>구종별 트래킹 (Pitch Tracking) <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 연도 × 구종 상세 + 허용 타구질</span></SectionTitle>
             <PitchArsenalTable rows={arsenal} />
           </div>
         )}
@@ -435,15 +437,18 @@ function PitcherPercentiles({ pitching }: { pitching: PitchingData | null }) {
     <div className="bg-white rounded-lg shadow p-4 space-y-1 flex-1" data-testid="percentile-section">
       <PercentileScale />
       <SectionHeader icon="🏆" title="가치 (Value)" />
+      <PercentileBar label="WAR" value={pitching.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
+      <PercentileBar label="ERA-" value={pitching.sabermetrics.era_minus.toFixed(0)} percentile={pc.era_minus ?? 50} tooltip={TOOLTIPS['ERA-']} />
+      <PercentileBar label="FIP" value={pitching.sabermetrics.fip.toFixed(2)} percentile={pc.fip ?? 50} tooltip={TOOLTIPS.FIP} />
+      <PercentileBar label="FIP-" value={pitching.sabermetrics.fip_minus.toFixed(0)} percentile={pc.fip_minus ?? 50} tooltip={TOOLTIPS['FIP-']} />
+      <Divider />
+      <SectionHeader icon="📈" title="Run Value" demo />
       <PercentileBar label="Pitching RV" value={frv(pitching.run_value?.pitching_rv)} percentile={pc.pitching_rv ?? 50} tooltip={TOOLTIPS['Pitching RV']} />
       <PercentileBar label="Fastball RV" value={frv(pitching.run_value?.fastball_rv)} percentile={pc.fastball_rv ?? 50} tooltip={TOOLTIPS['Fastball RV']} />
       <PercentileBar label="Breaking RV" value={frv(pitching.run_value?.breaking_rv)} percentile={pc.breaking_rv ?? 50} tooltip={TOOLTIPS['Breaking RV']} />
       <PercentileBar label="Offspeed RV" value={frv(pitching.run_value?.offspeed_rv)} percentile={pc.offspeed_rv ?? 50} tooltip={TOOLTIPS['Offspeed RV']} />
-      <PercentileBar label="WAR" value={pitching.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
-      <PercentileBar label="ERA-" value={pitching.sabermetrics.era_minus.toFixed(0)} percentile={pc.era_minus ?? 50} tooltip={TOOLTIPS['ERA-']} />
-      <PercentileBar label="FIP" value={pitching.sabermetrics.fip.toFixed(2)} percentile={pc.fip ?? 50} tooltip={TOOLTIPS.FIP} />
       <Divider />
-      <SectionHeader icon="⚾" title="투구 (Pitching)" />
+      <SectionHeader icon="⚾" title="투구 (Pitching)" demo />
       <PercentileBar label="xERA" value={fx(pitching.tracking.xera, 2)} percentile={pc.xera ?? 50} tooltip={TOOLTIPS.xERA} />
       <PercentileBar label="허용 xBA" value={fx(pitching.tracking.allowed_xba)} percentile={pc.allowed_xba ?? 50} tooltip={TOOLTIPS['허용 xBA']} />
       <PercentileBar label="Fastball Velo" value={pitching.tracking.fastball_velo != null ? `${pitching.tracking.fastball_velo.toFixed(1)}` : '—'} percentile={pc.fastball_velo ?? 50} tooltip={TOOLTIPS['Fastball Velo']} />
@@ -470,20 +475,21 @@ function BatterPercentiles({ batting }: { batting: BattingData | null }) {
   return (
     <div className="bg-white rounded-lg shadow p-4 space-y-1 flex-1" data-testid="batter-percentile-section">
         <PercentileScale />
-        <SubLabel>생산 지표</SubLabel>
+        <SectionHeader icon="🏆" title="가치 (Value)" />
         <PercentileBar label="WAR" value={batting.sabermetrics.war.toFixed(1)} percentile={pc.war ?? 50} tooltip={TOOLTIPS.WAR} />
         <PercentileBar label="wRC+" value={String(batting.sabermetrics.wrc_plus)} percentile={pc.wrc_plus ?? 50} tooltip={TOOLTIPS['wRC+']} />
         <PercentileBar label="OPS" value={batting.classic.ops.toFixed(3).replace(/^0/, '')} percentile={pc.ops ?? 50} tooltip={TOOLTIPS.OPS} />
+        <PercentileBar label="wOBA" value={batting.sabermetrics.woba.toFixed(3).replace(/^0/, '')} percentile={pc.woba ?? pc.wrc_plus ?? 50} tooltip={TOOLTIPS.wOBA} />
         <PercentileBar label="BABIP" value={batting.sabermetrics.babip.toFixed(3).replace(/^0/, '')} percentile={pc.babip ?? 50} tooltip={TOOLTIPS.BABIP} />
         <Divider />
-        <SubLabel>타구 질</SubLabel>
+        <SectionHeader icon="🏏" title="타격 (Batting)" demo />
         <PercentileBar label="하드힛%" value={`${batting.tracking.hard_hit_pct.toFixed(1)}%`} percentile={pc.hard_hit_pct ?? 50} tooltip={TOOLTIPS['하드힛%']} />
         <PercentileBar label="배럴%" value={`${batting.tracking.barrel_pct.toFixed(1)}%`} percentile={pc.barrel_pct ?? 50} tooltip={TOOLTIPS['배럴%']} />
         <PercentileBar label="평균 EV" value={`${batting.tracking.avg_ev.toFixed(1)}`} percentile={pc.avg_ev ?? 50} tooltip={TOOLTIPS['평균 EV']} />
+        <PercentileBar label="스위트스팟%" value={`${batting.tracking.sweet_spot_pct.toFixed(1)}%`} percentile={pc.sweet_spot_pct ?? 50} tooltip={TOOLTIPS['스위트스팟%']} />
         <PercentileBar label="xBA" value={fx(batting.tracking.xba)} percentile={pc.xba ?? 50} tooltip={TOOLTIPS.xBA} />
+        <PercentileBar label="xSLG" value={fx(batting.tracking.xslg)} percentile={pc.xslg ?? 50} tooltip={TOOLTIPS.xSLG} />
         <PercentileBar label="xwOBA" value={fx(batting.tracking.xwoba)} percentile={pc.xwoba ?? 50} tooltip={TOOLTIPS.xwOBA} />
-        <Divider />
-        <SubLabel>선구안</SubLabel>
         <PercentileBar label="Chase%" value={`${batting.tracking.chase_pct.toFixed(1)}%`} percentile={pc.chase_pct ?? 50} tooltip={TOOLTIPS['Chase%']} />
         <PercentileBar label="Whiff%" value={`${batting.tracking.whiff_pct.toFixed(1)}%`} percentile={pc.whiff_pct ?? 50} tooltip={TOOLTIPS['Whiff%']} />
     </div>
@@ -664,17 +670,17 @@ function PitcherHeroCharts({ pitches, armAngle }: { pitches: PitchesData | null;
   return (
     <>
       <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>Movement Profile <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별 수평×수직 무브먼트</span></SectionTitle>
+        <SectionTitle demo>Movement Profile <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별 수평×수직 무브먼트</span></SectionTitle>
         <MovementProfile data={pitches.movement} armAngle={armAngle} />
       </div>
       {pitches.pitch_mix.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4">
-          <SectionTitle>구종 구성</SectionTitle>
+          <SectionTitle demo>구종 구성</SectionTitle>
           <PitchMix data={pitches.pitch_mix} season={2024} />
         </div>
       )}
       <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>구속 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별</span></SectionTitle>
+        <SectionTitle demo>구속 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별</span></SectionTitle>
         <Suspense fallback={<SkeletonBlock height="200px" />}>
           <VeloTrend data={pitches.velocity_trend} />
         </Suspense>
@@ -698,7 +704,7 @@ function BatterHeroCharts({ battedBalls, batting }: { battedBalls: BattedBallsDa
     <>
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center justify-between mb-2">
-          <SectionTitle>스프레이 차트</SectionTitle>
+          <SectionTitle demo>스프레이 차트</SectionTitle>
           <select className="text-xs border rounded px-1 py-0.5" value={sprayColorBy}
             onChange={e => setSprayColorBy(e.target.value as 'result' | 'exit_velocity')} data-testid="spray-color-select">
             <option value="result">결과별</option>
@@ -736,14 +742,14 @@ function PitcherChartGrid({ pitches }: { pitches: PitchesData | null }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>투구 탄착군 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 밀도</span></SectionTitle>
+        <SectionTitle demo>투구 탄착군 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 밀도</span></SectionTitle>
         <div className="flex justify-center" data-testid="pitch-zone-container">
           <PitchZoneMap data={pitches.locations} />
         </div>
       </div>
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center justify-between mb-2">
-          <SectionTitle>스트라이크존 히트맵 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 위치별 밀도</span></SectionTitle>
+          <SectionTitle demo>스트라이크존 히트맵 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 위치별 밀도</span></SectionTitle>
           <select className="text-xs border rounded px-1 py-0.5" value={zoneMetric}
             onChange={e => setZoneMetric(e.target.value as 'batting_avg' | 'whiff_pct')} data-testid="zone-metric-select">
             <option value="batting_avg">피안타율</option>
@@ -783,7 +789,7 @@ function BatterChartGrid({ battedBalls }: { battedBalls: BattedBallsData | null 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
         {zoneData.length > 0 && (
           <div className="bg-white rounded-lg shadow p-4">
-            <SectionTitle>존별 타율 히트맵</SectionTitle>
+            <SectionTitle demo>존별 타율 히트맵</SectionTitle>
             <div className="flex justify-center" data-testid="batter-zone-map-container">
               <StrikeZoneMap data={zoneData} colorBy="batting_avg" />
             </div>
@@ -791,7 +797,7 @@ function BatterChartGrid({ battedBalls }: { battedBalls: BattedBallsData | null 
         )}
         {battedBalls.batted_profile && (
           <div className="bg-white rounded-lg shadow p-4">
-            <SectionTitle>타구 프로파일 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 종류 · 방향</span></SectionTitle>
+            <SectionTitle demo>타구 프로파일 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 종류 · 방향</span></SectionTitle>
             <BattedBallProfile data={battedBalls.batted_profile} />
           </div>
         )}
@@ -810,7 +816,7 @@ function BatterChartGrid({ battedBalls }: { battedBalls: BattedBallsData | null 
       {/* 최근 경기 타구 로그 */}
       {battedBalls.game_log && battedBalls.game_log.length > 0 && (
         <div className="space-y-2">
-          <SectionTitle>최근 경기 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 타구 요약(최근 20경기)</span></SectionTitle>
+          <SectionTitle demo>최근 경기 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 타구 요약(최근 20경기)</span></SectionTitle>
           <div className="bg-white rounded-lg shadow overflow-x-auto">
             <table className="w-full min-w-max text-[11px] border-collapse" data-testid="batter-game-log">
               <thead>
@@ -845,7 +851,7 @@ function BatterChartGrid({ battedBalls }: { battedBalls: BattedBallsData | null 
       {/* 구종별 타격 성적 */}
       {battedBalls.arsenal && battedBalls.arsenal.length > 0 && (
         <div className="space-y-2">
-          <SectionTitle>구종별 타격 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별 인플레이 타구 성적</span></SectionTitle>
+          <SectionTitle demo>구종별 타격 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별 인플레이 타구 성적</span></SectionTitle>
           <BatterArsenalTable rows={battedBalls.arsenal} />
         </div>
       )}
@@ -873,12 +879,26 @@ function PercentileScale() {
   )
 }
 
-function SectionHeader({ icon, title }: { icon: string; title: string }) {
+function SectionHeader({ icon, title, demo }: { icon: string; title: string; demo?: boolean }) {
   return (
     <div className="flex items-center gap-1.5 border-b-2 border-[#0A2240] pb-1 mb-2 mt-1">
       <span className="text-sm">{icon}</span>
       <span className="text-sm font-bold text-[var(--color-text-primary)]">{title}</span>
+      {demo && <DemoBadge />}
     </div>
+  )
+}
+
+/* KBO 미공개(트래킹) 지표 표시용 배지 */
+function DemoBadge({ className = '' }: { className?: string }) {
+  return (
+    <span
+      title="KBO가 투구·타구 트래킹 데이터를 공개하지 않아 현재는 데모(샘플) 값입니다."
+      className={`ml-auto shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded border border-[#FDE68A] bg-[#FFF8E1] text-[#92400E] cursor-help ${className}`}
+      data-testid="demo-badge"
+    >
+      DEMO
+    </span>
   )
 }
 
@@ -900,13 +920,15 @@ function StatRow({ label, value, accent, 'data-testid': testid }: { label: strin
   )
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-sm font-bold text-[var(--color-text-primary)] mb-2">{children}</h2>
+function SectionTitle({ children, demo }: { children: React.ReactNode; demo?: boolean }) {
+  return (
+    <h2 className="text-sm font-bold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
+      {children}
+      {demo && <DemoBadge className="ml-1" />}
+    </h2>
+  )
 }
 
-function SubLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">{children}</p>
-}
 
 function Divider() {
   return <div className="border-t pt-2 mt-2" />
