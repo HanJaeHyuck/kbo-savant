@@ -23,6 +23,8 @@ import GameLogTable from '../components/tables/GameLogTable'
 import BattedBallProfile from '../components/charts/BattedBallProfile'
 import BatterVsHandSplits from '../components/charts/BatterVsHandSplits'
 import BatterArsenalTable from '../components/tables/BatterArsenalTable'
+import BattedBallScatter from '../components/charts/BattedBallScatter'
+import BatterPitchMix from '../components/charts/BatterPitchMix'
 const BatterRollingTrend = lazy(() => import('../components/charts/BatterRollingTrend'))
 import SimilarPlayers from '../components/ui/SimilarPlayers'
 import {
@@ -715,6 +717,16 @@ function BatterHeroCharts({ battedBalls, batting }: { battedBalls: BattedBallsDa
           <SprayChart data={battedBalls?.spray_data ?? []} colorBy={sprayColorBy} />
         </div>
       </div>
+      <div className="bg-white rounded-lg shadow p-4">
+        <SectionTitle demo>타구 산점도 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 발사각 × 타구속도</span></SectionTitle>
+        <BattedBallScatter data={battedBalls?.spray_data ?? []} />
+      </div>
+      {battedBalls?.arsenal && battedBalls.arsenal.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <SectionTitle demo>구종별 상대 성적</SectionTitle>
+          <BatterPitchMix rows={battedBalls.arsenal} />
+        </div>
+      )}
       {radarPlayers.length > 0 && (
         <div className="bg-white rounded-lg shadow p-4">
           <SectionTitle>레이더 차트</SectionTitle>
