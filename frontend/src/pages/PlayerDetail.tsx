@@ -21,12 +21,16 @@ import CareerSplitsTable from '../components/tables/CareerSplitsTable'
 import PitchArsenalTable from '../components/tables/PitchArsenalTable'
 import GameLogTable from '../components/tables/GameLogTable'
 import BattedBallProfile from '../components/charts/BattedBallProfile'
+import BatterVsHandSplits from '../components/charts/BatterVsHandSplits'
+import BatterArsenalTable from '../components/tables/BatterArsenalTable'
+const BatterRollingTrend = lazy(() => import('../components/charts/BatterRollingTrend'))
 import SimilarPlayers from '../components/ui/SimilarPlayers'
 import {
   getPlayer, getPitchingStats, getBattingStats, getPitches, getBattedBalls,
   getCareerBatting, getCareerPitching, getPitchArsenal,
 } from '../api/players'
-import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint, VsHandSplitsData, GameLogRow, BattedProfileData } from '../types'
+import type { ZoneData, VeloPoint, PitchType, SprayData, PitchLocation, PitchCountRow, CareerRow, MovementPoint, ZoneGridCell, PitchArsenalRow, RollingPoint, VsHandSplitsData, GameLogRow, BattedProfileData,
+  BatterVsHandData, BatterArsenalRow, BatterGameLogRow, BatterRollingPoint } from '../types'
 
 interface PlayerInfo {
   id: number
@@ -77,7 +81,16 @@ interface BattingData {
 }
 
 interface ZoneAvg { zone: number; avg: number; attempts: number }
-interface BattedBallsData { total: number; spray_data: SprayData[]; zone_avg?: ZoneAvg[] }
+interface BattedBallsData {
+  total: number
+  spray_data: SprayData[]
+  zone_avg?: ZoneAvg[]
+  vs_hand?: BatterVsHandData
+  batted_profile?: BattedProfileData
+  rolling_trend?: BatterRollingPoint[]
+  game_log?: BatterGameLogRow[]
+  arsenal?: BatterArsenalRow[]
+}
 
 const TOOLTIPS: Record<string, string> = {
   WAR: '대체 선수 대비 기여 승수',
@@ -276,6 +289,7 @@ export default function PlayerDetail() {
           <div className="flex flex-col gap-3 min-w-0">
             <PlayerHeroCard info={playerInfo} career={career} isPitcher={isPitcher} />
             {isPitcher && <PitchUsageTable pitches={pitches} season={selectedYear} onNav={navigate} playerId={playerId} playerName={playerInfo.name} />}
+            {!isPitcher && battedBalls?.vs_hand && <BatterVsHandSplits data={battedBalls.vs_hand} />}
             {!isPitcher && (
               <div className="bg-white rounded-lg shadow p-3" data-testid="batter-player-apps">
                 <p className="text-[10px] font-semibold text-[var(--color-text-muted)] mb-1.5">Player Apps</p>
@@ -762,16 +776,80 @@ function BatterChartGrid({ battedBalls }: { battedBalls: BattedBallsData | null 
   const zoneData: ZoneData[] = battedBalls?.zone_avg?.map(z => ({
     zone: z.zone, pitches: z.attempts, batting_avg: z.avg, whiff_pct: 0,
   })) ?? []
-  if (zoneData.length === 0) return null
+  if (!battedBalls) return null
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-white rounded-lg shadow p-4">
-        <SectionTitle>존별 타율 히트맵</SectionTitle>
-        <div className="flex justify-center" data-testid="batter-zone-map-container">
-          <StrikeZoneMap data={zoneData} colorBy="batting_avg" />
-        </div>
+    <>
+      {/* 2열: 존별 타율 히트맵 + 허용... 타구 프로파일 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+        {zoneData.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-4">
+            <SectionTitle>존별 타율 히트맵</SectionTitle>
+            <div className="flex justify-center" data-testid="batter-zone-map-container">
+              <StrikeZoneMap data={zoneData} colorBy="batting_avg" />
+            </div>
+          </div>
+        )}
+        {battedBalls.batted_profile && (
+          <div className="bg-white rounded-lg shadow p-4">
+            <SectionTitle>타구 프로파일 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 종류 · 방향</span></SectionTitle>
+            <BattedBallProfile data={battedBalls.batted_profile} />
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* Rolling 트렌드 */}
+      {battedBalls.rolling_trend && battedBalls.rolling_trend.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <SectionTitle>Rolling 트렌드 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 경기별 이동평균(wOBA/EV/하드힛%)</span></SectionTitle>
+          <Suspense fallback={<SkeletonBlock height="260px" />}>
+            <BatterRollingTrend data={battedBalls.rolling_trend} />
+          </Suspense>
+        </div>
+      )}
+
+      {/* 최근 경기 타구 로그 */}
+      {battedBalls.game_log && battedBalls.game_log.length > 0 && (
+        <div className="space-y-2">
+          <SectionTitle>최근 경기 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 타구 요약(최근 20경기)</span></SectionTitle>
+          <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <table className="w-full min-w-max text-[11px] border-collapse" data-testid="batter-game-log">
+              <thead>
+                <tr className="bg-[#F4F6FA] text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
+                  <th className="text-left font-normal px-2 py-1.5">날짜</th>
+                  <th className="text-right font-normal px-2 py-1.5">타구</th>
+                  <th className="text-right font-normal px-2 py-1.5">안타</th>
+                  <th className="text-right font-normal px-2 py-1.5">HR</th>
+                  <th className="text-right font-normal px-2 py-1.5">타율</th>
+                  <th className="text-right font-normal px-2 py-1.5">평균 EV</th>
+                  <th className="text-right font-normal px-2 py-1.5">하드힛%</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono">
+                {battedBalls.game_log.map(r => (
+                  <tr key={r.game_date} className="border-b border-[#EEF2F7] hover:bg-[#EFF6FF]">
+                    <td className="text-left px-2 py-1 font-sans text-[var(--color-text-secondary)]">{r.game_date}</td>
+                    <td className="text-right px-2 py-1">{r.bbe}</td>
+                    <td className="text-right px-2 py-1">{r.h}</td>
+                    <td className="text-right px-2 py-1">{r.hr}</td>
+                    <td className="text-right px-2 py-1">{r.ba.toFixed(3).replace(/^0/, '')}</td>
+                    <td className="text-right px-2 py-1">{r.avg_ev.toFixed(1)}</td>
+                    <td className="text-right px-2 py-1">{r.hard_hit_pct.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 구종별 타격 성적 */}
+      {battedBalls.arsenal && battedBalls.arsenal.length > 0 && (
+        <div className="space-y-2">
+          <SectionTitle>구종별 타격 <span className="text-[11px] font-normal text-[var(--color-text-muted)]">— 구종별 인플레이 타구 성적</span></SectionTitle>
+          <BatterArsenalTable rows={battedBalls.arsenal} />
+        </div>
+      )}
+    </>
   )
 }
 

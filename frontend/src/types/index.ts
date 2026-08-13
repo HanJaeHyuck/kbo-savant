@@ -255,3 +255,44 @@ export interface BattedProfileData {
 export interface BattedBallProfileProps {
   data: BattedProfileData
 }
+
+// ── 타자 확장 ──────────────────────────────────
+export interface BatterHandStat {
+  bbe: number
+  ba: number
+  slg: number
+  woba: number
+  hr: number
+  avg_ev: number
+  avg_la: number
+  hard_hit_pct: number
+  barrel_pct: number
+  sweet_spot_pct: number
+}
+
+export interface BatterVsHandData {
+  L: BatterHandStat
+  R: BatterHandStat
+}
+
+export interface BatterArsenalRow extends BatterHandStat {
+  pitch_type: string
+  pct: number
+}
+
+export interface BatterGameLogRow {
+  game_date: string
+  bbe: number
+  h: number
+  hr: number
+  ba: number
+  avg_ev: number
+  hard_hit_pct: number
+}
+
+export interface BatterRollingPoint {
+  game_date: string
+  woba: number | null
+  avg_ev: number | null
+  hard_hit_pct: number | null
+}
