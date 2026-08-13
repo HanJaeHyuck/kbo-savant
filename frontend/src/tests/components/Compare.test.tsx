@@ -68,4 +68,16 @@ describe('CompareView', () => {
     render(<CompareView dataA={MOCK_A} dataB={MOCK_B} />)
     expect(screen.getByTestId('compare-stats-table')).toBeInTheDocument()
   })
+
+  it('퍼센타일 바가 퍼센타일이 아닌 실제 수치를 표시', () => {
+    render(<CompareView dataA={MOCK_A} dataB={MOCK_B} />)
+    // WAR 실제값(7.2)이 노출되어야 함 (퍼센타일 97이 아니라)
+    expect(screen.getAllByText('7.2').length).toBeGreaterThan(0)
+  })
+
+  it('트래킹 지표에 DEMO 마커 표시', () => {
+    const { container } = render(<CompareView dataA={MOCK_A} dataB={MOCK_B} />)
+    const markers = container.querySelectorAll('[title*="KBO 미공개"]')
+    expect(markers.length).toBeGreaterThan(0)
+  })
 })
