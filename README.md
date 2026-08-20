@@ -28,6 +28,15 @@ MLB **Baseball Savant** 수준의 KBO 데이터 분석 플랫폼.
 ### 선수 상세 — 타자
 - 퍼센타일 랭킹(생산/타구질/선구안), 스프레이 차트, 존별 히트맵, 레이더 차트, xBA/xSLG/xwOBA
 
+### 경기 일정·결과 (실데이터 ✅)
+- KBO 공식 게임센터에서 수집한 **실제 경기 데이터** — 일정·스코어·구장·중계사·선발/승패세 투수
+- 홈 화면 스코어보드(LIVE/종료/예정 배지, 경기 없는 날 자동 숨김)
+- `python crawl_schedule.py 3` 로 최근 3일치 수집, 스케줄러가 매일 자동 갱신
+
+> **데이터 신뢰도 표기**: KBO는 투구·타구 트래킹 데이터를 공개하지 않습니다.
+> 트래킹 파생 지표(EV·발사각·구속·스핀·xBA 등)에는 화면에 `DEMO` 배지가 붙고,
+> 경기 일정·결과처럼 실제로 수집한 데이터에는 `실데이터` 배지가 붙습니다.
+
 ### 공통
 - **유사 선수(Player Similarity)**: 같은 포지션군 스탯 프로필 유사도 Top 5
 - 리더보드(정렬·팀 필터·페이지네이션), 선수 비교(퍼센타일 이중 바), 홈 하이라이트
@@ -85,6 +94,8 @@ GET /api/players/{id}/similar?season=      유사 선수 Top 5
 GET /api/players/{id}/career/{batting|pitching}
 GET /api/leaderboard?type=&stat=&season=&team=&page=
 GET /api/compare?ids=1,2&season=
+GET /api/games?game_date=YYYY-MM-DD    경기 일정/결과 (실데이터)
+GET /api/games/dates                   저장된 경기 날짜 목록
 GET /health
 ```
 
