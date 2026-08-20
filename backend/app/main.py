@@ -5,7 +5,7 @@ import os
 
 load_dotenv()
 
-from app.routers import players, leaderboard, compare
+from app.routers import players, leaderboard, compare, games
 from app.database import Base, engine
 import logging
 
@@ -29,6 +29,7 @@ app.add_middleware(
 app.include_router(players.router)
 app.include_router(leaderboard.router)
 app.include_router(compare.router)
+app.include_router(games.router)
 
 
 @app.on_event("startup")
