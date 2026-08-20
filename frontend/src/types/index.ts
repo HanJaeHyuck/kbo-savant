@@ -296,3 +296,33 @@ export interface BatterRollingPoint {
   avg_ev: number | null
   hard_hit_pct: number | null
 }
+
+// ── 경기 일정/결과 (KBO 공식 실데이터) ──────────
+export interface GameTeam {
+  code: string | null
+  name: string | null
+  score: number | null
+  pitcher: string | null
+}
+
+export interface GameRow {
+  game_id: string
+  game_date: string
+  season: number
+  stadium: string | null
+  broadcast: string | null
+  start_time: string | null
+  status: string | null
+  status_code: number | null
+  away: GameTeam
+  home: GameTeam
+  win_pitcher: string | null
+  lose_pitcher: string | null
+  save_pitcher: string | null
+}
+
+export interface GamesResponse {
+  game_date: string | null
+  total: number
+  data: GameRow[]
+}

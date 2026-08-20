@@ -1,6 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom'
 import NavBar from '../components/ui/NavBar'
 import PlayerSearchInput from '../components/ui/PlayerSearchInput'
+import Scoreboard from '../components/ui/Scoreboard'
 import HighlightCard from '../components/ui/HighlightCard'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useLeaderboard } from '../hooks/useLeaderboard'
@@ -50,6 +51,9 @@ export default function Home() {
       </section>
 
       <main className="max-w-7xl mx-auto px-4 py-8 pb-20 md:pb-8 space-y-10">
+
+        {/* 섹션 1: 경기 스코어보드 (KBO 공식 실데이터) */}
+        <Scoreboard />
 
         {/* 섹션 2: 주목 선수 하이라이트 */}
         <section data-testid="highlights-section">

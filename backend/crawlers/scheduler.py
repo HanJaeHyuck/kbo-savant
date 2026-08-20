@@ -19,6 +19,27 @@ async def daily_crawl():
     from crawlers.statiz_crawler import StatizCrawler
 
     logging.info("[스케줄러] 일일 크롤링 시작")
+
+    # 1) KBO 경기 일정/결과 (실데이터 — 어제·오늘)
+    try:
+        from datetime import date, timedelta
+        from app.database import SessionLocal
+        from crawlers.kbo_schedule_crawler import KBOScheduleCrawler
+        from crawlers.schedule_db_service import save_games
+
+        sched = KBOScheduleCrawler()
+        today = date.today()
+        games = await sched.crawl_range(today - timedelta(days=1), today)
+        if games:
+            db = SessionLocal()
+            try:
+                save_games(games, db)
+            finally:
+                db.close()
+    except Exception as e:
+        logging.error(f"[스케줄러] 경기 일정 크롤링 실패: {e}")
+
+    # 2) 스탯티즈 세이버 스탯
     try:
         statiz = StatizCrawler()
         await statiz.crawl_batting_stats(2024)
