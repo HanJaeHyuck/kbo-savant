@@ -113,7 +113,26 @@ class StatizCrawler:
         self.base_url = os.getenv("STATIZ_BASE_URL", "https://www.statiz.co.kr")
         self.crawl_delay = crawl_delay
 
+    @staticmethod
+    def _assert_permitted() -> None:
+        """약관/robots.txt 준수 가드.
+
+        스탯티즈 robots.txt: User-agent: * → Disallow: / (Google/Naver/Bing만 허용)
+        스탯티즈 이용약관 제20조(크롤링 등 자동화 수집행위의 금지):
+          사전 서면 동의 또는 공식 API 없이 크롤러·스크래퍼·봇으로 콘텐츠(경기 결과,
+          선수 통계, 분석 데이터 등)를 대량·반복 수집하는 것을 금지하며, 수집 데이터의
+          재판매·재배포·타 플랫폼 연동·2차 가공도 금지한다.
+        """
+        import os
+        if os.getenv("ENABLE_STATIZ_CRAWL", "false").lower() != "true":
+            raise PermissionError(
+                "스탯티즈 크롤링이 비활성 상태입니다. robots.txt와 이용약관 제20조는 "
+                "사전 서면 동의 또는 공식 API 없이 자동 수집을 금지합니다. "
+                "정식 승인(war@statiz.co.kr 문의) 후 ENABLE_STATIZ_CRAWL=true 로 설정하세요."
+            )
+
     async def _fetch_html(self, url: str) -> str:
+        self._assert_permitted()
         from playwright.async_api import async_playwright
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)

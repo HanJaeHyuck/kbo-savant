@@ -20,26 +20,37 @@ async def daily_crawl():
 
     logging.info("[스케줄러] 일일 크롤링 시작")
 
-    # 1) KBO 경기 일정/결과 (실데이터 — 어제·오늘)
-    try:
-        from datetime import date, timedelta
-        from app.database import SessionLocal
-        from crawlers.kbo_schedule_crawler import KBOScheduleCrawler
-        from crawlers.schedule_db_service import save_games
+    # ── KBO 경기 일정/결과 자동 수집: 기본 비활성화 ──────────────────────
+    # KBO 이용약관 제16조 "차. 크롤링 등 자동화 수집 행위의 금지" 및
+    # robots.txt(User-agent: * → Disallow: /)에 따라 사전 서면 동의 또는
+    # 공식 API 없이는 자동·반복 수집이 금지된다.
+    # 정식 승인을 받은 경우에만 ENABLE_KBO_CRAWL=true 로 활성화할 것.
+    if os.getenv("ENABLE_KBO_CRAWL", "false").lower() == "true":
+        try:
+            from datetime import date, timedelta
+            from app.database import SessionLocal
+            from crawlers.kbo_schedule_crawler import KBOScheduleCrawler
+            from crawlers.schedule_db_service import save_games
 
-        sched = KBOScheduleCrawler()
-        today = date.today()
-        games = await sched.crawl_range(today - timedelta(days=1), today)
-        if games:
-            db = SessionLocal()
-            try:
-                save_games(games, db)
-            finally:
-                db.close()
-    except Exception as e:
-        logging.error(f"[스케줄러] 경기 일정 크롤링 실패: {e}")
+            sched = KBOScheduleCrawler()
+            today = date.today()
+            games = await sched.crawl_range(today - timedelta(days=1), today)
+            if games:
+                db = SessionLocal()
+                try:
+                    save_games(games, db)
+                finally:
+                    db.close()
+        except Exception as e:
+            logging.error(f"[스케줄러] 경기 일정 크롤링 실패: {e}")
+    else:
+        logging.info("[스케줄러] KBO 경기 크롤링 비활성 (ENABLE_KBO_CRAWL 미설정 — 약관 준수)")
 
-    # 2) 스탯티즈 세이버 스탯
+    # 스탯티즈 세이버 스탯 — 동일하게 약관상 자동 수집 금지 대상
+    if os.getenv("ENABLE_STATIZ_CRAWL", "false").lower() != "true":
+        logging.info("[스케줄러] 스탯티즈 크롤링 비활성 (ENABLE_STATIZ_CRAWL 미설정 — 약관 준수)")
+        return
+
     try:
         statiz = StatizCrawler()
         await statiz.crawl_batting_stats(2024)

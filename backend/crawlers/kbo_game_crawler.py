@@ -163,8 +163,18 @@ class KBOGameCrawler:
         self.base_url = os.getenv("KBO_BASE_URL", "https://www.koreabaseball.com")
         self.crawl_delay = crawl_delay
 
+    @staticmethod
+    def _assert_permitted() -> None:
+        """약관/robots.txt 준수 가드 (KBO 이용약관 제16조 차항, robots.txt Disallow: /)."""
+        if os.getenv("ENABLE_KBO_CRAWL", "false").lower() != "true":
+            raise PermissionError(
+                "KBO 크롤링이 비활성 상태입니다. 사전 서면 동의 또는 공식 API 확보 후 "
+                "ENABLE_KBO_CRAWL=true 로 설정하세요."
+            )
+
     async def _fetch_game_html(self, game_id: str) -> str:
         """Playwright로 게임센터 페이지 HTML을 가져온다."""
+        self._assert_permitted()
         from playwright.async_api import async_playwright
 
         url = (

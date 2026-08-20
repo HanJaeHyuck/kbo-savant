@@ -1,8 +1,25 @@
 """
-KBO 공식 게임센터 경기 일정/결과 크롤러 (실데이터).
+KBO 공식 게임센터 경기 일정/결과 크롤러.
 
-KBO는 투구/타구 트래킹 데이터를 공개하지 않지만, 경기 일정·결과·스코어·
-선발/승패세 투수는 게임센터에서 공개한다. 이 크롤러는 그 범위만 수집한다.
+⚠️ 사용 전 필수 확인 — 기본적으로 실행이 차단되어 있습니다.
+
+    KBO robots.txt 첫 줄:
+      "본 사이트의 데이터를 사전 승인 없이 자동 수집·크롤링·복제하는 행위를 금지합니다."
+      User-agent: *  →  Disallow: /
+
+    KBO 이용약관 제16조 "차. 크롤링 등 자동화 수집 행위의 금지":
+      회사의 사전 서면 동의 또는 KBO가 제공하는 공식 API 없이 크롤러·스크래퍼·
+      매크로·봇 등 자동화 수단으로 서비스 콘텐츠(경기 결과, 선수통계, 분석
+      데이터 등)를 대량 반복적으로 수집하는 것을 금지하며, 수집한 데이터를
+      재판매·재배포·타 플랫폼 연동·2차가공하여 활용하는 것도 금지한다.
+
+    따라서 이 크롤러는 **KBO로부터 사전 서면 동의를 받았거나 공식 API 이용
+    권한을 확보한 경우에만** 사용해야 합니다. 그 전까지는 환경변수
+    ENABLE_KBO_CRAWL=true 를 설정하지 않는 한 실행되지 않습니다.
+    (파서 함수 parse_games는 네트워크 접근이 없어 테스트에 자유롭게 사용 가능)
+
+기술적으로 수집 가능한 범위: 경기 일정·결과·스코어·구장·중계사·선발/승패세 투수.
+투구/타구 트래킹 데이터(구속·타구속도·발사각·스핀)는 KBO가 공개하지 않는다.
 
 실제 DOM 구조 (2026-08 기준 확인):
   li.game-cont[g_id, g_dt, season, s_nm, away_id, home_id, away_nm, home_nm,
@@ -118,7 +135,18 @@ class KBOScheduleCrawler:
         self.base_url = KBO_BASE_URL
         self.crawl_delay = crawl_delay
 
+    @staticmethod
+    def _assert_permitted() -> None:
+        """약관/robots.txt 준수 가드 — 사전 승인 확인 없이는 네트워크 접근을 차단한다."""
+        if os.getenv("ENABLE_KBO_CRAWL", "false").lower() != "true":
+            raise PermissionError(
+                "KBO 크롤링이 비활성 상태입니다. KBO robots.txt와 이용약관 제16조는 "
+                "사전 서면 동의 또는 공식 API 없이 자동 수집을 금지합니다. "
+                "정식 승인을 확보한 뒤 ENABLE_KBO_CRAWL=true 로 설정하세요."
+            )
+
     async def _fetch_html(self, target: date) -> str:
+        self._assert_permitted()
         from playwright.async_api import async_playwright
 
         url = f"{self.base_url}{GAME_CENTER_PATH}"
